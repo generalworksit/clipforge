@@ -3,6 +3,7 @@
 # First run installs what is missing (FFmpeg, Python, Node.js, Python packages).
 set -euo pipefail
 cd "$(dirname "$0")"
+SETUP_ONLY=0; [ "${1:-}" = "--setup-only" ] && SETUP_ONLY=1 && shift
 
 install_pkg() {
   # install_pkg <brew name> <apt name> <dnf name> <pacman name>
@@ -64,6 +65,8 @@ if [ -d .venv/lib ]; then
     [ -d "$d" ] && export LD_LIBRARY_PATH="$PWD/$d:${LD_LIBRARY_PATH:-}"
   done
 fi
+
+if [ "$SETUP_ONLY" = 1 ]; then echo "Setup complete. Start ClipForge with ./run.sh"; exit 0; fi
 
 echo "ClipForge is starting at http://127.0.0.1:8000  (Ctrl+C to stop)"
 exec .venv/bin/python -m app "$@"

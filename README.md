@@ -16,7 +16,7 @@ Windows 10/11 · Python · FFmpeg · Whisper · runs offline after setup
 ## Contents
 
 - [What it does](#what-it-does)
-- [Install](#install)
+- [Install](#install) · [with your AI agent](#with-your-ai-agent)
 - [First clips in 2 minutes](#first-clips-in-2-minutes)
 - [Live capture with the Chrome companion](#live-capture-with-the-chrome-companion)
 - [Settings](#settings)
@@ -50,6 +50,31 @@ Everything runs on `127.0.0.1`. Your videos, keys and settings never leave the P
 ## Install
 
 You don't need to install anything by hand. The launcher checks your PC and gets what is missing.
+
+### With your AI agent
+
+Paste this into Claude Code, Codex, Cursor or any coding agent that can run commands on your PC:
+
+```text
+Install ClipForge for me from https://github.com/generalworksit/clipforge
+1. Clone it into my Desktop folder (use my GitHub login if the repo asks for access).
+2. Run the installer once without starting the app:
+   Windows: run.bat --setup-only        macOS/Linux: ./run.sh --setup-only
+   It installs FFmpeg, Python, Node.js and the Python packages by itself.
+   Accept any Windows permission prompt. If it fails, read the error,
+   fix the cause and run it again. Don't install packages globally.
+3. When it prints "Setup complete", tell me the folder path and that I start
+   ClipForge by double-clicking run.bat (./run.sh on macOS/Linux).
+Do not start the app yourself and do not change any project file.
+```
+
+The agent installs everything and stops. You then double-click `run.bat` and the app opens in your browser. The optional local AI question is skipped in this mode; install it later with `winget install Ollama.Ollama`.
+
+Prefer a terminal? One line does the same:
+
+```powershell
+git clone https://github.com/generalworksit/clipforge.git "$HOME\Desktop\clipforge"; cd "$HOME\Desktop\clipforge"; .\run.bat
+```
 
 ### Windows
 
@@ -126,7 +151,7 @@ Defaults work for most people. To change them, copy `config.example.yaml` to `co
 | `download.cookies_from_browser` | empty | `firefox`, `chrome` or `edge` for private or age-restricted videos |
 | `captions.default_preset` | `bold` | `clean`, `karaoke`, `podcast`, `neon` and 9 others |
 
-Run `run.bat --no-browser` to start without opening a tab.
+Run `run.bat --no-browser` to start without opening a tab, or `run.bat --setup-only` to install everything without starting the app.
 
 ## Troubleshooting
 

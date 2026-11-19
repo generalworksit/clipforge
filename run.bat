@@ -5,6 +5,9 @@ rem Later runs only start the app.
 setlocal EnableExtensions
 cd /d "%~dp0"
 title ClipForge
+rem --setup-only installs everything and exits without starting the app (for scripts and AI agents)
+set "CF_SETUP_ONLY="
+if /i "%~1"=="--setup-only" set CF_SETUP_ONLY=1
 
 rem ---------------------------------------------------------------- FFmpeg (required)
 call :have ffmpeg ffprobe
@@ -68,6 +71,7 @@ echo [setup] Node.js could not be installed. Every tool works except Auto monito
 
 rem ---------------------------------------------------------------- Ollama (optional, asked once)
 :ai_choice
+if defined CF_SETUP_ONLY goto :launch
 call :have ollama
 if not errorlevel 1 goto :launch
 if exist ".venv\ollama-choice.txt" goto :launch
@@ -86,6 +90,7 @@ set CF_PULL_MODEL=1
 
 rem ---------------------------------------------------------------- start
 :launch
+if defined CF_SETUP_ONLY goto :setup_done
 call :ollama
 echo.
 echo ClipForge is starting at http://127.0.0.1:8000  (close this window to stop it)
@@ -94,6 +99,11 @@ rem Stop the Ollama server this script started (closing the window stops it too)
 if defined CF_STARTED_OLLAMA taskkill /im ollama.exe /t /f >nul 2>nul
 goto :eof
 
+
+:setup_done
+echo.
+echo Setup complete. Start ClipForge with run.bat, it opens http://127.0.0.1:8000
+exit /b 0
 
 rem ================================================================= helpers
 
@@ -174,7 +184,7 @@ echo FFmpeg could not be installed automatically. Install it with:
 echo     winget install Gyan.FFmpeg
 echo or download it from https://www.gyan.dev/ffmpeg/builds/ and add its bin folder to PATH,
 echo then run run.bat again.
-pause
+if not defined CF_SETUP_ONLY pause
 exit /b 1
 
 :no_python
@@ -182,12 +192,12 @@ echo.
 echo Python 3.11, 3.12 or 3.13 is required and could not be installed automatically.
 echo Install it with:  winget install Python.Python.3.12
 echo or from https://www.python.org/downloads/ (tick "Add python.exe to PATH"), then run run.bat again.
-pause
+if not defined CF_SETUP_ONLY pause
 exit /b 1
 
 :pip_failed
 echo.
 echo Package installation failed, see the messages above. Check your internet connection
 echo and run run.bat again. To start clean, delete the .venv folder first.
-pause
+if not defined CF_SETUP_ONLY pause
 exit /b 1
