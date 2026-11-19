@@ -1,0 +1,3 @@
+# Only needed with an NVIDIA GPU. Provides the CUDA 12 cuBLAS and cuDNN 9 DLLs faster-whisper needs.
+nvidia-cublas-cu12
+nvidia-cudnn-cu12>=9,<10

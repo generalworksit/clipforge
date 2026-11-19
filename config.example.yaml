@@ -1,0 +1,49 @@
+# ClipForge settings. Restart the app after editing.
+
+server:
+  port: 8000            # always bound to 127.0.0.1
+  open_browser: true
+
+download:
+  max_height: 1080      # source quality for the clip, subtitle and convert tools
+  # Let the downloader use a browser's logins, for Instagram stories/private posts or
+  # age-restricted videos: firefox | chrome | edge | brave ... (Chrome/Edge must be closed).
+  cookies_from_browser: ""
+
+whisper:
+  # auto = large-v3 on an NVIDIA GPU, small on CPU.
+  # Any faster-whisper name works: tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3 ...
+  model: auto
+  device: auto          # auto | cuda | cpu
+  compute_type: auto    # auto = float16 on cuda, int8 on cpu
+  beam_size: 5
+
+moments:
+  provider: ollama      # ollama | heuristic
+  min_seconds: 20
+  max_seconds: 60
+  ollama:
+    url: http://localhost:11434
+    model: qwen3:8b
+    num_ctx: 8192       # context window requested from Ollama
+    temperature: 0.3
+    timeout: 600        # seconds per request
+    chunk_minutes: 10   # used only when the transcript does not fit in num_ctx
+    chunk_overlap_minutes: 1
+    unload_after: true  # free VRAM after picking, so Whisper has room on the next job
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  encoder: libx264      # h264_nvenc also works on NVIDIA GPUs
+  crf: 20
+  preset: veryfast
+  audio_bitrate: 160k
+  reframe: center       # crop strategy, see app/video.py REFRAMERS
+
+captions:
+  font_file: assets/fonts/Anton-Regular.ttf
+  font_name: Anton
+  default_preset: bold      # bold | clean | neon | pop | box | solo | hype | karaoke | podcast | marker | comic | bounce | typewriter | minimal
+  default_position: bottom  # bottom | middle | top

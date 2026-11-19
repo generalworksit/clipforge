@@ -1,0 +1,13 @@
+fastapi>=0.115
+uvicorn>=0.30
+python-multipart>=0.0.9
+yt-dlp>=2025.10.22
+yt-dlp-ejs
+curl_cffi>=0.11,<0.15   # browser impersonation, TikTok needs it
+faster-whisper>=1.1.0
+pyyaml>=6.0
+requests>=2.32
+kokoro-onnx>=0.5,<0.7   # AI voice intro (local text-to-speech)
+soundfile>=0.12
+opencv-python-headless>=4.8   # face tracking for the vertical crop
+pillow>=10   # thumbnails (text, arrows)

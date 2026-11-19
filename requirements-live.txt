@@ -1,0 +1,4 @@
+# Install into the existing ClipForge virtual environment.
+grpcio==1.85.1
+protobuf>=6.31,<8
+streamlink==8.6.3
