@@ -7,6 +7,8 @@ A clipping workspace that runs on your own PC. Paste a link, get vertical clips 
 
 Windows 10/11 · Python · FFmpeg · Whisper · runs offline after setup
 
+[![Stars](https://img.shields.io/github/stars/generalworksit/clipforge?style=flat&color=ffd23f&labelColor=1c1c1e)](https://github.com/generalworksit/clipforge/stargazers) [![License: MIT](https://img.shields.io/badge/license-MIT-ffd23f?labelColor=1c1c1e)](LICENSE) [![Last commit](https://img.shields.io/github/last-commit/generalworksit/clipforge?color=ffd23f&labelColor=1c1c1e)](https://github.com/generalworksit/clipforge/commits/main)
+
 <img src="docs/screenshots/home.png" alt="ClipForge home screen" width="100%">
 
 </div>
@@ -22,6 +24,8 @@ Windows 10/11 · Python · FFmpeg · Whisper · runs offline after setup
 - [Settings](#settings)
 - [Troubleshooting](#troubleshooting)
 - [Status and limits](#status-and-limits)
+- [Related projects](#related-projects)
+- [License](#license)
 
 ## What it does
 
@@ -199,3 +203,25 @@ Make sure ClipForge is running, then press **Connect app** again. Reload the ext
 - Only process media you own or have permission to use.
 
 Recordings, models, keys, cookies and logs stay out of version control. For the code layout and tests see [docs/development.md](docs/development.md).
+
+## Related projects
+
+| | |
+|---|---|
+| <img src="extension/docs/icon.png" width="40" alt=""> | **[ClipForge Live](https://github.com/generalworksit/clipforge-live)**. The Chrome extension on its own: clips Twitch and YouTube streams when chat reacts and sends them to ClipForge. Same code as the `extension` folder here |
+
+## Star history
+
+<a href="https://star-history.com/#generalworksit/clipforge&generalworksit/clipforge-live&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=generalworksit/clipforge,generalworksit/clipforge-live&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=generalworksit/clipforge,generalworksit/clipforge-live&type=Date" />
+   <img alt="Star history of ClipForge and ClipForge Live" src="https://api.star-history.com/svg?repos=generalworksit/clipforge,generalworksit/clipforge-live&type=Date" width="100%" />
+ </picture>
+</a>
+
+The chart updates on its own as people star either repo.
+
+## License
+
+[MIT](LICENSE). Use it, change it, ship it, keep the copyright notice. The bundled fonts in `assets/fonts` and `static/fonts` keep their own open font licenses, included beside each font. Whisper, Kokoro and Ollama models are downloaded from their authors and follow their own licenses.
