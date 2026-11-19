@@ -136,7 +136,7 @@ Without an NVIDIA GPU ClipForge picks the smaller Whisper model and everything s
 3. Pin **ClipForge Live** and press **Connect app** in its popup. The connection is saved.
 4. Open a livestream with its chat visible and press **Start capture**.
 
-When chat reacts, ClipForge keeps 20 seconds before the moment and 12 seconds after chat settles, and the clip shows up in **Live clips**. **Save moment** (`Alt+Shift+C`) marks one yourself. More in [extension/README.md](extension/README.md).
+When chat reacts, ClipForge keeps 20 seconds before the moment and 12 seconds after chat settles, and the clip shows up in **Live clips**. **Save moment** (`Alt+Shift+C`) marks one yourself. The extension also lives in its own repo, [clipforge-live](https://github.com/generalworksit/clipforge-live), with the full guide.
 
 ## Settings
 
