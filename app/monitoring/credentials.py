@@ -1,4 +1,5 @@
-"""Protect the local API key with Windows DPAPI; never return it from the API."""
+"""Protect the local API key with Windows DPAPI; never return it from the API.
+On macOS/Linux there is no DPAPI: the key file is readable by this user only (0600)."""
 import ctypes
 import os
 from ctypes import wintypes
@@ -11,7 +12,7 @@ class Blob(ctypes.Structure):
 
 def _crypt(data, decrypt=False):
     if os.name != "nt":
-        raise RuntimeError("This credential store requires Windows DPAPI.")
+        return data
     memory = ctypes.create_string_buffer(data)
     source = Blob(len(data), ctypes.cast(memory, ctypes.POINTER(ctypes.c_ubyte)))
     target = Blob()
@@ -39,6 +40,8 @@ def save_key(key):
     store.DATA.mkdir(exist_ok=True, parents=True)
     tmp = store.DATA / "youtube-key.tmp"
     tmp.write_bytes(_crypt(key.strip().encode()))
+    if os.name != "nt":
+        os.chmod(tmp, 0o600)
     os.replace(tmp, store.DATA / "youtube-key.dpapi")
 
 

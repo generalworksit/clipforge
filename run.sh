@@ -33,10 +33,19 @@ if [ ! -x .venv/bin/python ]; then
   PY=$(find_python) || {
     echo "[setup] Python 3.11+ is missing, installing it ..."
     install_pkg python@3.12 "python3 python3-venv python3-pip" python3 python || true
-    PY=$(find_python) || { echo "Install Python 3.11, 3.12 or 3.13, then run ./run.sh again."; exit 1; }
+    PY=$(find_python) || PY=""
   }
-  echo "[setup] Creating the virtual environment in .venv ..."
-  "$PY" -m venv .venv
+  if [ -n "$PY" ] && "$PY" -m venv .venv 2>/dev/null; then
+    echo "[setup] Created the virtual environment in .venv with $PY"
+  else
+    # Newer distros ship only Python 3.14+, or venv is missing: get a private Python 3.12 with uv
+    # (installs into your home folder, nothing system-wide).
+    rm -rf .venv
+    echo "[setup] Getting Python 3.12 with uv (https://docs.astral.sh/uv) ..."
+    export PATH="$HOME/.local/bin:$PATH"
+    command -v uv >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
+    uv venv --seed --python 3.12 .venv || { echo "Install Python 3.11, 3.12 or 3.13, then run ./run.sh again."; exit 1; }
+  fi
 fi
 
 if ! .venv/bin/python -c "import fastapi, faster_whisper, yt_dlp, yaml, multipart, curl_cffi, kokoro_onnx, soundfile, cv2, PIL" 2>/dev/null; then

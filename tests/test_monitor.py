@@ -1,4 +1,5 @@
 """Real local media + detector tests; provider responses below are explicit fixtures."""
+import os
 import tempfile
 import time
 import subprocess
@@ -37,7 +38,11 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(self.client.post("/api/monitor/key", json={"key": key}, headers={"Origin": "https://evil.example"}).status_code, 403)
         self.assertEqual(self.client.post("/api/monitor/key", json={"key": key}).status_code, 200)
         self.assertEqual(credentials.get_key(), key)
-        self.assertNotIn(key.encode(), (store.DATA / "youtube-key.dpapi").read_bytes())
+        key_file = store.DATA / "youtube-key.dpapi"
+        if os.name == "nt":  # DPAPI encrypts at rest; elsewhere the file is owner-only
+            self.assertNotIn(key.encode(), key_file.read_bytes())
+        else:
+            self.assertEqual(key_file.stat().st_mode & 0o777, 0o600)
         first = self.add(feed="https://example.com/live.m3u8?secret=test", pre=35, preset="none")
         second = self.add()
         data = self.client.get("/api/monitor").json()

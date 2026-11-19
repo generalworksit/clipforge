@@ -5,7 +5,7 @@
 **Long video in, posts out.**
 A clipping workspace that runs on your own PC. Paste a link, get vertical clips with captions, ready for TikTok, Shorts and Reels.
 
-Windows 10/11 · Python · FFmpeg · Whisper · runs offline after setup
+Windows 10/11 · Linux · Python · FFmpeg · Whisper · runs offline after setup
 
 [![Stars](https://img.shields.io/github/stars/generalworksit/clipforge?style=flat&color=ffd23f&labelColor=1c1c1e)](https://github.com/generalworksit/clipforge/stargazers) [![License: MIT](https://img.shields.io/badge/license-MIT-ffd23f?labelColor=1c1c1e)](LICENSE) [![Last commit](https://img.shields.io/github/last-commit/generalworksit/clipforge?color=ffd23f&labelColor=1c1c1e)](https://github.com/generalworksit/clipforge/commits/main)
 
@@ -108,13 +108,23 @@ What the first run does for you:
 > [!NOTE]
 > Windows may show a permission prompt while installing Python, FFmpeg or Node.js. Accept it and the launcher continues on its own.
 
-### macOS and Linux
+### Linux and macOS
 
 ```bash
+git clone https://github.com/generalworksit/clipforge.git
+cd clipforge
 ./run.sh
 ```
 
-It installs FFmpeg, Python and Node.js through Homebrew, apt, dnf or pacman (it asks for your password on Linux), then the Python packages. Ollama is optional, get it from [ollama.com](https://ollama.com).
+The first run installs what is missing, like `run.bat` does on Windows:
+
+- **FFmpeg and Node.js** through apt, dnf, pacman or Homebrew. It asks for your password once on Linux.
+- **Python 3.12** in a private folder with [uv](https://docs.astral.sh/uv) when your distro only ships a newer Python (Ubuntu 26.04 ships 3.14, which the AI libraries don't support yet). Your system Python is not touched.
+- **Python packages** in `.venv`, plus the CUDA libraries when `nvidia-smi` finds an NVIDIA GPU.
+
+Then it opens http://127.0.0.1:8000. Tested on Ubuntu 26.04, including WSL on Windows with the GPU. Ollama is optional: `curl -fsSL https://ollama.com/install.sh | sh`, then `ollama pull qwen3:8b`.
+
+On Linux and macOS the Auto monitor API key is stored in a file only your user can read, since Windows' DPAPI encryption isn't available there. macOS should work the same way but hasn't been tested yet.
 
 ### Hardware
 
