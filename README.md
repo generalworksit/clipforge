@@ -9,7 +9,10 @@ Windows 10/11 · Python · FFmpeg · Whisper · runs offline after setup
 
 [![Stars](https://img.shields.io/github/stars/generalworksit/clipforge?style=flat&color=ffd23f&labelColor=1c1c1e)](https://github.com/generalworksit/clipforge/stargazers) [![License: MIT](https://img.shields.io/badge/license-MIT-ffd23f?labelColor=1c1c1e)](LICENSE) [![Last commit](https://img.shields.io/github/last-commit/generalworksit/clipforge?color=ffd23f&labelColor=1c1c1e)](https://github.com/generalworksit/clipforge/commits/main)
 
-<img src="docs/screenshots/home.png" alt="ClipForge home screen" width="100%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/home-dark.png">
+  <img src="docs/screenshots/home.png" alt="ClipForge home screen" width="100%">
+</picture>
 
 </div>
 
@@ -42,7 +45,7 @@ Windows 10/11 · Python · FFmpeg · Whisper · runs offline after setup
 | **AI voice** | Local text-to-speech for intros and voiceovers |
 | **Library** | Everything you made, with preview, save, select and bulk delete |
 
-Everything runs on `127.0.0.1`. Your videos, keys and settings never leave the PC, and nothing is posted for you.
+Light and dark mode follow your system, or switch with the button in the top bar. Everything runs on `127.0.0.1`. Your videos, keys and settings never leave the PC, and nothing is posted for you.
 
 <table>
 <tr>

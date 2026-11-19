@@ -1185,3 +1185,145 @@ button:active { transform: none; }
 .live-grid + .bulkbar, .live-grid { grid-column: 1 / -1; }
 #live-inbox > .bulkbar { margin-bottom: 12px; }
 @media (max-width: 640px) { .bulkbar { flex-wrap: wrap; padding: 8px; } .bulk-actions { width: 100%; } .bulk-actions .btn-s { flex: 1; justify-content: center; } }
+
+/* ================================================================ glass theme 2026-11-19 (Claude)
+   Frosted glass over an icy haze. Dark is the default, light follows the system or the toggle.
+   Footage previews (phones, frames, captions) keep their own colors on purpose: they show video. */
+:root {
+  --bg: #0a0f1c;
+  --s1: rgba(148, 170, 220, .06);
+  --s2: rgba(148, 170, 220, .10);
+  --s3: rgba(148, 170, 220, .16);
+  --line: rgba(190, 210, 255, .08);
+  --line-2: rgba(190, 210, 255, .14);
+  --line-3: rgba(190, 210, 255, .26);
+  --ink: #e8eef9;
+  --ink-2: #aab6cc;
+  --muted: #8592ab;
+  --faint: #5f6b82;
+  --accent: #8fb0ff;
+  --accent-ink: #a9c2ff;
+  --accent-wash: rgba(143, 176, 255, .10);
+  --on-accent: #ffffff;
+  --accent-grad: linear-gradient(135deg, #6d8cff 0%, #4a9fe6 100%);
+  --accent-glow: 0 8px 24px -8px rgba(90, 140, 255, .6);
+  --red: #ff6b76;
+  --green: #5fd3a0;
+  --glass-border: rgba(190, 210, 255, .12);
+  --glass-shadow: 0 16px 48px -20px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .06);
+  --nav-bg: rgba(10, 15, 28, .55);
+  --h1-grad: linear-gradient(180deg, #ffffff 0%, #d3def2 50%, #8ea2c4 100%);
+  --page-bg:
+    radial-gradient(55% 45% at 88% -5%, rgba(86, 128, 230, .24), transparent 70%),
+    radial-gradient(45% 40% at -5% 25%, rgba(80, 160, 230, .12), transparent 70%),
+    radial-gradient(60% 50% at 50% 105%, rgba(120, 110, 220, .14), transparent 70%),
+    #0a0f1c;
+  --r: 16px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #edf2f9; --s1: rgba(255, 255, 255, .55); --s2: rgba(255, 255, 255, .78); --s3: rgba(222, 231, 246, .9);
+    --line: rgba(60, 90, 150, .10); --line-2: rgba(60, 90, 150, .16); --line-3: rgba(60, 90, 150, .30);
+    --ink: #1a2335; --ink-2: #465268; --muted: #637089; --faint: #8b96aa;
+    --accent: #4a6fe8; --accent-ink: #3a5dd2; --accent-wash: rgba(74, 111, 232, .08); --on-accent: #ffffff;
+    --accent-grad: linear-gradient(135deg, #5a7bf0 0%, #3b8fd8 100%); --accent-glow: 0 8px 22px -8px rgba(70, 110, 230, .55);
+    --red: #d63c47; --green: #17905e;
+    --glass-border: rgba(255, 255, 255, .85);
+    --glass-shadow: 0 14px 40px -18px rgba(50, 80, 150, .30), inset 0 1px 0 rgba(255, 255, 255, .95);
+    --nav-bg: rgba(238, 243, 251, .6);
+    --h1-grad: linear-gradient(180deg, #1f2b45 0%, #4f6286 55%, #8c9dbd 100%);
+    --page-bg:
+      radial-gradient(55% 45% at 92% -5%, #d3e1f8 0%, transparent 70%),
+      radial-gradient(45% 40% at -5% 15%, #ffffff 0%, transparent 70%),
+      radial-gradient(60% 50% at 40% 105%, #dfe1f7 0%, transparent 70%),
+      linear-gradient(180deg, #eef3fa 0%, #e5ecf7 100%);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #edf2f9; --s1: rgba(255, 255, 255, .55); --s2: rgba(255, 255, 255, .78); --s3: rgba(222, 231, 246, .9);
+  --line: rgba(60, 90, 150, .10); --line-2: rgba(60, 90, 150, .16); --line-3: rgba(60, 90, 150, .30);
+  --ink: #1a2335; --ink-2: #465268; --muted: #637089; --faint: #8b96aa;
+  --accent: #4a6fe8; --accent-ink: #3a5dd2; --accent-wash: rgba(74, 111, 232, .08); --on-accent: #ffffff;
+  --accent-grad: linear-gradient(135deg, #5a7bf0 0%, #3b8fd8 100%); --accent-glow: 0 8px 22px -8px rgba(70, 110, 230, .55);
+  --red: #d63c47; --green: #17905e;
+  --glass-border: rgba(255, 255, 255, .85);
+  --glass-shadow: 0 14px 40px -18px rgba(50, 80, 150, .30), inset 0 1px 0 rgba(255, 255, 255, .95);
+  --nav-bg: rgba(238, 243, 251, .6);
+  --h1-grad: linear-gradient(180deg, #1f2b45 0%, #4f6286 55%, #8c9dbd 100%);
+  --page-bg:
+    radial-gradient(55% 45% at 92% -5%, #d3e1f8 0%, transparent 70%),
+    radial-gradient(45% 40% at -5% 15%, #ffffff 0%, transparent 70%),
+    radial-gradient(60% 50% at 40% 105%, #dfe1f7 0%, transparent 70%),
+    linear-gradient(180deg, #eef3fa 0%, #e5ecf7 100%);
+  color-scheme: light;
+}
+
+body { background: var(--page-bg); background-attachment: fixed; transition: background-color .3s var(--ease), color .3s var(--ease); }
+
+/* top bar: a frosted strip */
+.top { background: var(--nav-bg); backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%); border-bottom-color: var(--glass-border); }
+.logo { background: var(--accent-grad); box-shadow: var(--accent-glow); }
+.nav a.active { color: var(--ink); }
+.nav a.active::after { background: var(--accent-grad); }
+.theme-toggle { margin-left: auto; flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--glass-border); background: var(--s1); color: var(--ink-2); cursor: pointer; box-shadow: var(--glass-shadow); }
+.theme-toggle:hover { color: var(--ink); background: var(--s2); }
+.theme-toggle svg { width: 16px; height: 16px; }
+.theme-toggle .sun { display: none; }
+:root[data-theme="light"] .theme-toggle .sun { display: block; } :root[data-theme="light"] .theme-toggle .moon { display: none; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .theme-toggle .sun { display: block; } :root:not([data-theme="dark"]) .theme-toggle .moon { display: none; } }
+.activity:not(:empty) + .theme-toggle, .activity + .theme-toggle { margin-left: 12px; }
+.activity { margin-left: auto; }
+
+/* frosted panels */
+.recipe-panel, .live-setup, .live-card, .source-card, .workflow-empty, .tool, .stage-inner, .lib-pick, .adjust-card,
+.out, .sys, .monitor-form, .monitor-card, .monitor-empty, .error-box, .live-timeline, .workflow-strip, .clip, .switch {
+  background-color: var(--s1); border-color: var(--glass-border);
+  backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--glass-shadow);
+}
+.recipe-panel, .stage-inner, .out, .sys, .monitor-form, .monitor-card, .tool, .live-setup, .adjust-card, .clip { border-radius: 20px; }
+.jrow { background: var(--s1); border-color: var(--glass-border); border-radius: 14px; }
+.jrow:hover { background: var(--s2); }
+.tool:hover, .recipe:hover, .effect-grid button:hover { background: var(--s2); border-color: var(--line-3); }
+.recipe, .effect-grid button, .mode-card, .seg, .stepper, input, select, textarea, .ghost, .btn-s, .copy, .chip { border-color: var(--line-2); }
+input, select, textarea { background: var(--s2); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.seg button[aria-checked=true], .seg button[aria-pressed=true] { background: var(--s2); box-shadow: 0 1px 2px rgba(0, 0, 0, .08), inset 0 0 0 1px var(--glass-border); }
+
+/* primary actions: the icy gradient pill */
+.primary { background: var(--accent-grad); color: var(--on-accent); border-radius: 12px; box-shadow: var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .3); }
+.primary:hover { filter: brightness(1.06) saturate(1.05); }
+.switch input:checked, .pick input:checked, .bulk-all input:checked, .bulk-all input:indeterminate { background: var(--accent-grad); border-color: transparent; }
+.mode-card[aria-checked=true] .mode-ico { background: var(--accent-grad); }
+.bar i, .jrow-main .bar i { background: var(--accent-grad); }
+::selection { background: var(--accent); color: var(--on-accent); }
+
+/* headings: brushed chrome */
+h1 { background: var(--h1-grad); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 500; }
+.hero h1 { font-stretch: 100%; font-weight: 400; letter-spacing: -0.035em; }
+.hero h1 .hi { background: var(--accent-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--body); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-2); }
+.eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-grad); box-shadow: 0 0 0 3px var(--accent-wash); flex: none; }
+
+/* states that used the old yellow */
+.chip.state-running { color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.jrow.picked { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: var(--accent-wash); }
+.monitor[data-state="moment"], .live-timeline > div:nth-child(2) { border-color: var(--accent); }
+.ct-hype { --dot: #f2b84b; }
+.ctag { background: var(--s2); border: 1px solid var(--line); }
+.source-image span { background: var(--nav-bg); color: var(--ink); backdrop-filter: blur(8px); }
+.live-card .pick { background: var(--nav-bg); }
+select option { background: var(--bg); color: var(--ink); }
+select option:disabled { color: var(--faint); }
+input[type=date] { color-scheme: inherit; }
+
+@media (prefers-reduced-transparency: reduce) {
+  .top, .recipe-panel, .live-setup, .live-card, .source-card, .tool, .stage-inner, .out, .sys, .monitor-form, .monitor-card { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+.art-srt { color: #e8eef9; }
+.btn-s.main, .out .downloads a.main { background: var(--accent-grad); color: var(--on-accent); border-color: transparent; }
+.actionbar { background: var(--nav-bg); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-top-color: var(--glass-border); padding-inline: 16px; margin-inline: -16px; border-radius: 16px 16px 0 0; }
