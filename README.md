@@ -1,34 +1,176 @@
+<div align="center">
+
 # ClipForge
 
-A local video clipping workspace for Windows.
+**Long video in, posts out.**
+A clipping workspace that runs on your own PC. Paste a link, get vertical clips with captions, ready for TikTok, Shorts and Reels.
 
-- Capture YouTube and Twitch highlights with the Chrome companion.
-- Keep the lead-in, detect chat reactions, and save clean MP4 clips.
-- Turn recordings into short clips with Whisper subtitles, caption styles, or no captions.
-- Preview, trim, reformat, download, and delete clips locally.
+Windows 10/11 · Python · FFmpeg · Whisper · runs offline after setup
 
-## Start
+<img src="docs/screenshots/home.png" alt="ClipForge home screen" width="100%">
 
-Install Python 3.11+, FFmpeg, and Node.js 22+. Then run:
+</div>
 
-```bat
-run.bat
+---
+
+## Contents
+
+- [What it does](#what-it-does)
+- [Install](#install)
+- [First clips in 2 minutes](#first-clips-in-2-minutes)
+- [Live capture with the Chrome companion](#live-capture-with-the-chrome-companion)
+- [Settings](#settings)
+- [Troubleshooting](#troubleshooting)
+- [Status and limits](#status-and-limits)
+
+## What it does
+
+| Tool | What you get |
+|---|---|
+| **Clip maker** | Finds the best moments in a long video, cuts them to 9:16, follows the speaker and adds styled word-by-word captions. Optional thumbnail per clip |
+| **Live clips** | Records YouTube and Twitch streams in Chrome and saves a clip when chat reacts, with the setup before and the ending after |
+| **Auto monitor** | Same idea without a browser tab, for YouTube livestreams (experimental) |
+| **Discover** | Searches YouTube by topic and compares view counts to find a source worth clipping |
+| **Daily queue** | Plans 2 to 4 posts a day and tracks what you already posted |
+| **Downloader** | MP4 or MP3 from YouTube, TikTok, Instagram, X, Reddit, Twitch and 1000+ other sites, many links at once |
+| **Subtitles** | SRT, VTT or text with word timing, translation to English, or captions burned into the video |
+| **Converter** | Make vertical (blur or crop), compress to a target size for Discord or WhatsApp, trim, extract MP3, make GIFs |
+| **AI voice** | Local text-to-speech for intros and voiceovers |
+| **Library** | Everything you made, with preview, save, select and bulk delete |
+
+Everything runs on `127.0.0.1`. Your videos, keys and settings never leave the PC, and nothing is posted for you.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/clip-maker.png" alt="Clip maker"><br><sub>Clip maker: recipes, moment types, length and a live style preview</sub></td>
+<td width="50%"><img src="docs/screenshots/downloader.png" alt="Downloader"><br><sub>Downloader: paste many links, pick MP4 or MP3</sub></td>
+</tr>
+</table>
+
+## Install
+
+You don't need to install anything by hand. The launcher checks your PC and gets what is missing.
+
+### Windows
+
+1. Download the project: **Code → Download ZIP** on GitHub and extract it, or
+   ```bat
+   git clone https://github.com/generalworksit/clipforge.git
+   ```
+2. Double-click **`run.bat`**.
+
+That's it. The first run takes 5 to 15 minutes depending on your connection, later runs start in a few seconds. The browser opens **http://127.0.0.1:8000** by itself.
+
+What the first run does for you:
+
+| Step | How | Needed for |
+|---|---|---|
+| FFmpeg | installed with `winget` if missing | everything (required) |
+| Python 3.12 | installed with `winget` if no Python 3.11 to 3.13 is found | everything (required) |
+| Python packages | created in a private `.venv` folder, nothing touches your system Python | everything |
+| CUDA libraries | only when an NVIDIA GPU is detected | much faster transcription |
+| Node.js LTS | installed with `winget` if missing | Auto monitor only |
+| Ollama + qwen3:8b | **asked once**, about 6 GB, skipped after 30 s | smarter moment picking (optional) |
+| Whisper and voice models | downloaded the first time a tool needs them | subtitles, clips, AI voice |
+
+> [!NOTE]
+> Windows may show a permission prompt while installing Python, FFmpeg or Node.js. Accept it and the launcher continues on its own.
+
+### macOS and Linux
+
+```bash
+./run.sh
 ```
 
-Open **http://127.0.0.1:8000**. Dependencies install on first launch; speech models download when first needed. Ollama is optional for moment selection.
+It installs FFmpeg, Python and Node.js through Homebrew, apt, dnf or pacman (it asks for your password on Linux), then the Python packages. Ollama is optional, get it from [ollama.com](https://ollama.com).
 
-## Live capture
+### Hardware
 
-Load the `extension` folder through **chrome://extensions → Developer mode → Load unpacked**. Click **Connect app**, open a livestream with chat, then **Start capture**. Use **Save moment** to mark one yourself.
+| | Minimum | Better |
+|---|---|---|
+| CPU / RAM | any 64-bit CPU, 8 GB RAM | 16 GB RAM |
+| GPU | not required | NVIDIA with 8 GB+ VRAM: Whisper large-v3 and the local AI run on it |
+| Disk | 5 GB free | 20 GB+ if you keep many clips or use Auto monitor (needs 8 GB free) |
 
-Clips appear in **Live clips**. The connection is saved automatically; manual pairing remains available.
+Without an NVIDIA GPU ClipForge picks the smaller Whisper model and everything still works, only slower.
 
-## Status
+## First clips in 2 minutes
 
-The Chrome companion requires the stream tab to stay open and visible. Background **Auto monitor** is an experimental YouTube-only path requiring a valid Google Cloud API key; its local export pipeline is tested, but real broadcast validation is still pending. Twitch/Kick background connectors are not implemented.
+1. Run `run.bat`, the app opens in your browser.
+2. Paste a YouTube, TikTok, Instagram, X or Twitch link on the home page and press **Make clips**.
+3. Pick a recipe (**Clean talk**, **High energy** or **Story cut**), or tune the moments, length and caption style yourself.
+4. Press **Make clips**. Progress shows at the top of every page.
+5. Preview, trim and download each clip from the result page. Everything also lands in **Library**.
 
-English, French, and Russian speech are supported by Whisper; review automatic captions. Use media you own or have permission to process. Nothing is published automatically.
+## Live capture with the Chrome companion
 
-Settings, recordings, credentials, model files, and logs stay outside version control. Optional settings: copy `config.example.yaml` to `config.yaml`.
+<img src="docs/screenshots/live.png" alt="Live clips" width="100%">
 
-[Development notes](docs/development.md)
+1. Start ClipForge.
+2. Open `chrome://extensions`, turn on **Developer mode**, press **Load unpacked** and choose the `extension` folder.
+3. Pin **ClipForge Live** and press **Connect app** in its popup. The connection is saved.
+4. Open a livestream with its chat visible and press **Start capture**.
+
+When chat reacts, ClipForge keeps 20 seconds before the moment and 12 seconds after chat settles, and the clip shows up in **Live clips**. **Save moment** (`Alt+Shift+C`) marks one yourself. More in [extension/README.md](extension/README.md).
+
+## Settings
+
+Defaults work for most people. To change them, copy `config.example.yaml` to `config.yaml` and restart.
+
+| Setting | Default | Why change it |
+|---|---|---|
+| `server.port` | `8000` | port already in use |
+| `whisper.model` | `auto` | `large-v3-turbo` for speed, `small` on a weak PC |
+| `moments.provider` | `ollama` | `heuristic` to skip the local AI entirely |
+| `video.encoder` | `libx264` | `h264_nvenc` renders much faster on NVIDIA |
+| `download.cookies_from_browser` | empty | `firefox`, `chrome` or `edge` for private or age-restricted videos |
+| `captions.default_preset` | `bold` | `clean`, `karaoke`, `podcast`, `neon` and 9 others |
+
+Run `run.bat --no-browser` to start without opening a tab.
+
+## Troubleshooting
+
+<details>
+<summary><b>The launcher says winget is not available</b></summary>
+
+Install **App Installer** from the Microsoft Store, then run `run.bat` again. Or install the missing parts yourself: [Python 3.12](https://www.python.org/downloads/) (tick *Add python.exe to PATH*), [FFmpeg](https://www.gyan.dev/ffmpeg/builds/), [Node.js LTS](https://nodejs.org).
+</details>
+
+<details>
+<summary><b>"Package installation failed"</b></summary>
+
+Usually a dropped connection. Run `run.bat` again, it continues where it stopped. If it keeps failing, delete the `.venv` folder and run it once more for a clean install.
+</details>
+
+<details>
+<summary><b>Clips are picked without the AI</b></summary>
+
+Ollama isn't installed or running. Install it with `winget install Ollama.Ollama`, then `ollama pull qwen3:8b`. The launcher starts it on every run after that.
+</details>
+
+<details>
+<summary><b>Transcription is very slow</b></summary>
+
+No NVIDIA GPU was found, so Whisper runs on the CPU. Set `whisper.model: small` or `base` in `config.yaml` for faster results.
+</details>
+
+<details>
+<summary><b>Port 8000 is already in use</b></summary>
+
+Another ClipForge window is probably still open. Close it, or set another `server.port` in `config.yaml`. If you change the port, enter it in the Chrome companion too.
+</details>
+
+<details>
+<summary><b>The Chrome companion can't connect</b></summary>
+
+Make sure ClipForge is running, then press **Connect app** again. Reload the extension in `chrome://extensions` after updating ClipForge.
+</details>
+
+## Status and limits
+
+- The Chrome companion needs the stream tab open and visible. Ads and overlays inside the player are recorded too.
+- **Auto monitor** is experimental, YouTube only, and needs a Google Cloud API key for YouTube Data API v3. Twitch and Kick background capture are not built yet.
+- Whisper handles English, French and Russian well. Always review automatic captions before posting.
+- Only process media you own or have permission to use.
+
+Recordings, models, keys, cookies and logs stay out of version control. For the code layout and tests see [docs/development.md](docs/development.md).

@@ -1,30 +1,61 @@
 #!/usr/bin/env bash
 # Start ClipForge on macOS / Linux (on Windows use run.bat).
+# First run installs what is missing (FFmpeg, Python, Node.js, Python packages).
 set -euo pipefail
 cd "$(dirname "$0")"
 
-for bin in ffmpeg ffprobe; do
-  if ! command -v "$bin" >/dev/null; then
-    echo "$bin is required. Install it with: sudo apt install ffmpeg   (macOS: brew install ffmpeg)"
-    exit 1
+install_pkg() {
+  # install_pkg <brew name> <apt name> <dnf name> <pacman name>
+  if command -v brew >/dev/null; then brew install "$1"
+  elif command -v apt-get >/dev/null; then sudo apt-get update -qq && sudo apt-get install -y $2
+  elif command -v dnf >/dev/null; then sudo dnf install -y $3
+  elif command -v pacman >/dev/null; then sudo pacman -S --noconfirm $4
+  else return 1
   fi
-done
+}
 
-PY=python3
-command -v "$PY" >/dev/null || PY=python
+if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+  echo "[setup] FFmpeg is missing, installing it ..."
+  install_pkg ffmpeg ffmpeg ffmpeg ffmpeg || { echo "Install FFmpeg yourself, then run ./run.sh again."; exit 1; }
+fi
+
+find_python() {
+  for c in python3.12 python3.11 python3.13 python3 python; do
+    if command -v "$c" >/dev/null && "$c" -c "import sys; sys.exit(0 if (3, 11) <= sys.version_info[:2] <= (3, 13) else 1)" 2>/dev/null; then
+      echo "$c"; return 0
+    fi
+  done
+  return 1
+}
+
 if [ ! -x .venv/bin/python ]; then
-  echo "Creating virtual environment in .venv ..."
+  PY=$(find_python) || {
+    echo "[setup] Python 3.11+ is missing, installing it ..."
+    install_pkg python@3.12 "python3 python3-venv python3-pip" python3 python || true
+    PY=$(find_python) || { echo "Install Python 3.11, 3.12 or 3.13, then run ./run.sh again."; exit 1; }
+  }
+  echo "[setup] Creating the virtual environment in .venv ..."
   "$PY" -m venv .venv
 fi
 
-if ! .venv/bin/python -c "import fastapi, faster_whisper, yt_dlp, yaml, multipart, curl_cffi, kokoro_onnx, soundfile" 2>/dev/null; then
-  echo "Installing Python packages, this takes a few minutes the first time ..."
+if ! .venv/bin/python -c "import fastapi, faster_whisper, yt_dlp, yaml, multipart, curl_cffi, kokoro_onnx, soundfile, cv2, PIL" 2>/dev/null; then
+  echo "[setup] Installing Python packages, this takes a few minutes the first time ..."
   .venv/bin/python -m pip install --upgrade pip
   .venv/bin/python -m pip install -r requirements.txt
   if command -v nvidia-smi >/dev/null; then
-    echo "NVIDIA GPU found, installing CUDA libraries for faster-whisper ..."
+    echo "[setup] NVIDIA GPU found, installing CUDA libraries for faster transcription ..."
     .venv/bin/python -m pip install -r requirements-cuda.txt
   fi
+fi
+
+if ! .venv/bin/python -c "import grpc, streamlink, google.protobuf" 2>/dev/null; then
+  echo "[setup] Installing Auto monitor packages ..."
+  .venv/bin/python -m pip install -r requirements-live.txt
+fi
+
+if ! command -v node >/dev/null; then
+  echo "[setup] Node.js is missing, installing it for Auto monitor ..."
+  install_pkg node nodejs nodejs nodejs || echo "[setup] Node.js not installed. Every tool works except Auto monitor."
 fi
 
 # pip's CUDA wheels ship their .so files inside site-packages/nvidia/*/lib
@@ -34,4 +65,5 @@ if [ -d .venv/lib ]; then
   done
 fi
 
+echo "ClipForge is starting at http://127.0.0.1:8000  (Ctrl+C to stop)"
 exec .venv/bin/python -m app "$@"
