@@ -37,9 +37,10 @@ Windows 10/11 · Linux · Python · FFmpeg · Whisper · runs offline after setu
 | **Clip maker** | Finds the best moments in a long video, cuts them to 9:16, follows the speaker and adds styled word-by-word captions. Optional thumbnail per clip |
 | **Live clips** | Records YouTube and Twitch streams in Chrome and saves a clip when chat reacts, with the setup before and the ending after |
 | **Gaming layout** | **Auto detect** finds the webcam in a gameplay recording for you, or draw webcam/game regions yourself, preview a vertical stack or camera overlay, save layouts, trim, and export with captions or without |
-| **Auto monitor** | Same idea without a browser tab, for YouTube livestreams (experimental) |
+| **Auto monitor** | Silent YouTube recording without browser tabs. Two simultaneous streams by default, configurable recording limits and independent buffers (experimental) |
+| **Publish** | Review clips, connect YouTube, and approve private uploads or scheduled posts. Four uploads per day by default; [setup](docs/publishing.md) |
 | **Downloader** | MP4 or MP3 from YouTube, TikTok, Instagram, X, Reddit, Twitch and 1000+ other sites, many links at once |
-| **Subtitles** | SRT, VTT or text with word timing, translation to English, or captions burned into the video |
+| **Subtitles** | SRT, VTT or text with word timing, translation to English, burned-in captions, and earlier/later timing adjustments |
 | **Converter** | Make vertical (blur or crop), compress to a target size for Discord or WhatsApp, trim, extract MP3, make GIFs |
 | **AI voice** | Local text-to-speech for intros and voiceovers |
 | **Library** | Everything you made, with preview, save, select and bulk delete |

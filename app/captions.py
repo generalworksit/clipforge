@@ -85,6 +85,14 @@ POSITIONS = {
 MARGIN_LR = 130
 
 
+def shift_words(words: list[dict], offset_ms: float, duration: float) -> list[dict]:
+    """An absolute adjustment of original timings; never accumulate previous edits."""
+    offset = offset_ms / 1000
+    return [{**w, "start": max(0, w["start"] + offset), "end": min(duration, w["end"] + offset)}
+            for w in words if w["end"] + offset > 0 and w["start"] + offset < duration
+            and w["end"] > w["start"]]
+
+
 def clip_words(words: list[dict], start: float, end: float) -> list[dict]:
     """Words inside [start, end], shifted to the clip's own timeline."""
     dur = end - start
@@ -107,8 +115,8 @@ def group_words(words: list[dict], max_words: int = 4, max_chars: int = 18, min_
         punct = w["text"][-1:] in ".,!?;:…"
         pause = nxt is not None and nxt["start"] - w["end"] > 0.5
         too_long = nxt is not None and length + len(nxt["text"]) > max_chars
-        if (nxt is None or len(cur) >= max_words
-                or (len(cur) >= min_words and (punct or pause or too_long))):
+        if (nxt is None or pause or len(cur) >= max_words
+                or (len(cur) >= min_words and (punct or too_long))):
             groups.append(cur)
             cur = []
     return groups
@@ -193,9 +201,10 @@ def build_ass(words: list[dict], clip_duration: float, preset: str, position: st
         if p["karaoke"]:
             parts, t = [], g_start
             for wi, (word, text) in enumerate(zip(group, texts)):
-                nxt = group[wi + 1]["start"] if wi + 1 < len(group) else word["end"]
-                parts.append(f"{{\\kf{max(1, round((nxt - t) * 100))}}}{text}")
-                t = nxt
+                if word["start"] > t:
+                    parts.append(f"{{\\k{round((word['start']-t)*100)}}}")
+                parts.append(f"{{\\kf{max(1, round((word['end'] - word['start']) * 100))}}}{text}")
+                t = word["end"]
             lines.append(f"Dialogue: 0,{_ts(g_start)},{_ts(g_end)},Main,,0,0,0,,{lead}{' '.join(parts)}")
             continue
         if p["reveal"]:  # words not spoken yet keep their place but are invisible, so the line never shifts
@@ -206,6 +215,7 @@ def build_ass(words: list[dict], clip_duration: float, preset: str, position: st
         for wi, word in enumerate(group):
             t0 = g_start if wi == 0 else word["start"]
             t1 = group[wi + 1]["start"] if wi + 1 < len(group) else g_end
+            t1 = min(t1, word["end"])
             if t1 - t0 < 0.01:
                 continue
             main = " ".join(_spoken(t, p, colour, k) if j == wi
@@ -250,8 +260,8 @@ def build_srt(words: list[dict], clip_duration: float) -> str:
 
 
 def write_caption_files(words: list[dict], start: float, end: float, preset: str, position: str,
-                        ass_path: Path, srt_path: Path) -> int:
-    local = clip_words(words, start, end)
+                        ass_path: Path, srt_path: Path, offset_ms: float = 0) -> int:
+    local = shift_words(clip_words(words, start, end), offset_ms, end-start)
     ass_path.write_text(build_ass(local, end - start, preset, position), encoding="utf-8")
     srt_path.write_text(build_srt(local, end - start), encoding="utf-8")
     return len(local)

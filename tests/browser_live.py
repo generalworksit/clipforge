@@ -82,6 +82,9 @@ with tempfile.TemporaryDirectory() as tmp, patch.object(jobs, "JOBS_DIR", Path(t
               return r;
             }""")
             assert result.get("ok"), result
+            assert page.evaluate("__command('LISTEN',{enabled:false})")["ok"]
+            page.wait_for_function("async () => (await __command('STATUS')).audio_level > .002")
+            assert not page.evaluate("__command('STATUS')")["listening"], "Speaker playback must be silent while recording audio"
             page.wait_for_timeout(1500)
             assert page.evaluate("__command('MARK')")["ok"]
             page.wait_for_timeout(4200)
@@ -105,6 +108,9 @@ with tempfile.TemporaryDirectory() as tmp, patch.object(jobs, "JOBS_DIR", Path(t
             assert st["state"] == "done"
             info = video.probe(jobs.job_dir(job_id) / "highlight.mp4")
             assert info.width == 1280 and info.height == 720 and info.has_audio, info
+            video.extract_audio(jobs.job_dir(job_id)/"highlight.mp4",jobs.job_dir(job_id)/"test-audio.wav",lambda _:None)
+            from app.audio import load_wav
+            assert abs(load_wav(jobs.job_dir(job_id)/"test-audio.wav")).max()>.02, "Silent listening must retain audible recorded samples"
             assert abs(info.duration - (st["source"]["capture"]["end"] - st["source"]["capture"]["start"])) < 0.4, info
             # Reaching the six-clip limit during recording must stop without a retry loop
             # or dropping the final in-memory highlight. Drain it after space is freed.

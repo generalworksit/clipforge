@@ -101,7 +101,10 @@ def probe(path: Path) -> MediaInfo:
 
 
 def extract_audio(src: Path, dst: Path, log: Log) -> None:
-    run_ffmpeg(["-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", str(dst)], log)
+    # Keep leading audio delay and timestamp gaps on the video's timeline. A plain
+    # WAV extraction starts at the first audio packet, making captions arrive early.
+    run_ffmpeg(["-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000",
+                "-af", "aresample=async=1:first_pts=0", "-c:a", "pcm_s16le", str(dst)], log)
 
 
 # ---------------------------------------------------------------- reframing

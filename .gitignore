@@ -6,6 +6,7 @@ models/
 artifacts/
 .live-token
 monitor-data/
+publishing-data/
 *.log
 .env
 .env.*

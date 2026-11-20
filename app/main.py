@@ -23,6 +23,8 @@ from .config import CONFIG, CONFIG_PATH, JOBS_DIR, ROOT, STATIC_DIR
 from .download import QUALITIES
 from .monitoring.api import router as monitor_router
 from .monitoring.service import supervisor as monitor_supervisor
+from .publishing.api import router as publishing_router
+from .publishing.worker import publisher
 
 FILE_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 URL_RE = re.compile(r"^https?://\S+$")
@@ -37,14 +39,17 @@ LOCAL_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
 async def lifespan(app: FastAPI):
     jobs.start_worker()
     monitor_supervisor.start()
+    publisher.start()
     try:
         yield
     finally:
+        publisher.close()
         monitor_supervisor.close()
 
 
 app = FastAPI(title="ClipForge", lifespan=lifespan)
 app.include_router(monitor_router)
+app.include_router(publishing_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/assets", StaticFiles(directory=ROOT / "assets"), name="assets")
 
@@ -120,7 +125,7 @@ def live_extension():
 def index() -> HTMLResponse:
     """index.html with versioned asset URLs, so an update never runs a cached old app.js/style.css."""
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    for name in ("app.js", "monitor.js", "style.css", "gaming.js", "gaming.css"):
+    for name in ("app.js", "monitor.js", "style.css", "gaming.js", "gaming.css", "publishing.js"):
         version = int((STATIC_DIR / name).stat().st_mtime)
         html = html.replace(f"/static/{name}\"", f"/static/{name}?v={version}\"")
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
@@ -525,6 +530,20 @@ def restyle_job(job_id: str, preset: str = Form(...), position: str = Form(...),
     if kind == "subtitles" and "burn" in status["stages"]:
         return jobs.requeue(job_id, ["burn"], {"preset": preset, "position": position, "erase_subs": erase})
     raise HTTPException(409, "This job has no burned-in captions.")
+
+
+@app.post("/api/jobs/{job_id}/caption-timing")
+def caption_timing(job_id: str, offset_ms: float = Form(0), rebuild: str = Form("")) -> dict:
+    import math
+    status = _idle_job(job_id)
+    kind = status.get("kind", "clips")
+    stages = {"clips": ["caption"], "subtitles": ["export", "burn"], "layout": ["caption"], "autoclip": ["export"]}
+    if status["state"] != "done" or kind not in stages or status["options"].get("preset") == "none":
+        raise HTTPException(409, "Choose a finished job with captions.")
+    if not math.isfinite(offset_ms) or not -5000 <= offset_ms <= 5000:
+        raise HTTPException(400, "Caption adjustment must be between -5000 and 5000 milliseconds.")
+    reset = ["transcribe", *stages[kind]] if _flag(rebuild) else stages[kind]
+    return jobs.requeue(job_id, reset, {"caption_offset_ms": offset_ms})
 
 
 @app.post("/api/jobs/{job_id}/repick")

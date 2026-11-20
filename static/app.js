@@ -813,7 +813,7 @@ function useInLinks(jobId, file, compact) {
   const q = `?from=${jobId}&file=${encodeURIComponent(file)}`;
   return compact
     ? `<a class="btn-s" href="#/clips${q}">Clips</a><a class="btn-s hide-sm" href="#/voice${q}">AI voice</a><a class="btn-s hide-sm" href="#/subtitles${q}">Subtitles</a><a class="btn-s hide-sm" href="#/convert${q}">Convert</a>`
-    : `<a href="#/gaming${q}">Gaming layout</a><a href="#/clips${q}">Make clips</a><a href="#/voice${q}">Add AI voice</a><a href="#/subtitles${q}">Subtitles</a><a href="#/convert${q}">Convert</a>`;
+    : `<a href="#/gaming${q}">Gaming layout</a><a href="#/clips${q}">Make clips</a><a href="#/voice${q}">Add AI voice</a><a href="#/subtitles${q}">Subtitles</a><a href="#/convert${q}">Convert</a>${file.endsWith('.mp4')?`<a href="#/publish${q}">Prepare upload</a>`:""}`;
 }
 
 /* ---------------------------------------------------------------- AI voice */
@@ -1228,6 +1228,14 @@ async function renderJob(id) {
       zip.hidden = files < 2;
       ({ layout: renderFileResults, autoclip: renderFileResults, live: renderFileResults, clips: renderClipResults, download: renderFileResults, convert: renderFileResults, subtitles: renderSubtitleResults, voice: renderVoiceResults })[kind](job);
       document.getElementById("results").hidden = false;
+      if (["clips","subtitles","layout","autoclip"].includes(kind) && o.preset !== "none") {
+        const panel=document.createElement("details");panel.className="section";
+        panel.innerHTML=`<summary>Adjust caption timing</summary><form id="caption-timing-form"><label class="field">Timing adjustment (milliseconds)<input name="offset_ms" type="number" min="-5000" max="5000" step="50" value="${Number(o.caption_offset_ms)||0}"></label><p class="hint-s">Negative = earlier. Positive = later. Applies to this job's captions.</p><label class="check"><input type="checkbox" name="rebuild" value="1">Re-transcribe audio to rebuild word timing</label><button class="primary small">Apply timing</button><p role="alert" class="error-box" hidden></p></form>`;
+        document.getElementById("result-body").append(panel);
+        panel.querySelector("form").onsubmit=async e=>{e.preventDefault();const button=panel.querySelector("button"),error=panel.querySelector("[role=alert]");button.disabled=true;error.hidden=true;
+          try{await api(`/api/jobs/${id}/caption-timing`,{method:"POST",body:new FormData(e.currentTarget)});if(panel.isConnected)renderJob(id);}
+          catch(err){error.textContent=err.message;error.hidden=false;button.disabled=false;}};
+      }
     }
     if (job.state === "queued" || job.state === "running") pollTimer = setTimeout(tick, 1500);
   }
@@ -1683,7 +1691,7 @@ async function renderLive() {
 }
 const LIVE_BUSY = new Set(["active", "running", "receiving", "queued"]);
 
-const ROUTES = { "": renderHome, gaming: renderGaming, monitor: renderMonitor, live: renderLive, clips: renderClips, download: renderDownload, subtitles: renderSubtitles,
+const ROUTES = { "": renderHome, publish: renderPublishing, gaming: renderGaming, monitor: renderMonitor, live: renderLive, clips: renderClips, download: renderDownload, subtitles: renderSubtitles,
   convert: renderConvert, voice: renderVoice, library: renderLibrary, history: renderLibrary, system: renderSystem };
 
 let routeSeq = 0;

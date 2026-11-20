@@ -19,9 +19,9 @@ class YouTube:
     chat = youtube.Chat
 
     @staticmethod
-    def resolve(url):
+    def resolve(url, quality="720p"):
         try:
-            result = subprocess.run([sys.executable, "-m", "streamlink", "--stream-url", url, "720p,720p60,best"],
+            result = subprocess.run([sys.executable, "-m", "streamlink", "--stream-url", url, f"{quality},{quality}60,worst"],
                 capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=40, creationflags=HIDDEN)
         except subprocess.TimeoutExpired:
             raise RuntimeError("Media lookup timed out. Check the stream or use your authorized media feed.") from None

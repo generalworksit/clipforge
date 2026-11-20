@@ -272,10 +272,11 @@ def _source(job: Job, wav: bool, need_video: bool = True, need_audio: bool = Tru
     from . import download, video
     s = job.status
     src = job.dir / s["source"].get("stored_as", "")
-    if job.done("download") and src.is_file() and (not wav or (job.dir / "audio.wav").is_file()):
+    if job.done("download") and src.is_file() and (not wav or ((job.dir / "audio.wav").is_file()
+            and (s["source"].get("audio_timing") == 2 or job.done("transcribe")))):
         return src, video.probe(src)
     with job.stage("download"):
-        if s["source"]["type"] == "url":
+        if s["source"]["type"] == "url" and not src.is_file():
             src, title = download.download_url(s["source"]["url"], job.dir, job.log, job.progress)
             s["title"] = title
         info = video.probe(src)
@@ -289,6 +290,7 @@ def _source(job: Job, wav: bool, need_video: bool = True, need_audio: bool = Tru
         if wav:
             job.progress(0.95, "extracting audio")
             video.extract_audio(src, job.dir / "audio.wav", job.log)
+            s["source"]["audio_timing"] = 2
         s["stages"]["download"]["detail"] = (f"{info.width}×{info.height}, " if info.has_video else "") + \
             f"{info.duration / 60:.1f} min"
     return src, info
@@ -346,7 +348,7 @@ def run_subtitles(job: Job) -> None:
                                                    f"{transcript['language']}" +
                                                    (" translated to English" if task == "translate" else ""))
 
-    words = moments.all_words(transcript)
+    words = captions.shift_words(moments.all_words(transcript), o.get("caption_offset_ms", 0), info.duration)
     with job.stage("export"):
         s["outputs"] = [x for x in s["outputs"] if x["file"] == "captioned.mp4"]
         files = [("subtitles.srt", captions.build_srt(words, info.duration), "Subtitles (SRT)"),
@@ -492,7 +494,7 @@ def run_clips(job: Job) -> None:
                 job.progress((i - 1) / len(clips), f"clip {i} of {len(clips)}")
                 ass, srt = f"{c['name']}.ass", f"{c['name']}.srt"
                 count = captions.write_caption_files(words, c["start"], c["end"], opts["preset"], opts["position"],
-                                                     job.dir / ass, job.dir / srt)
+                                                     job.dir / ass, job.dir / srt, opts.get("caption_offset_ms", 0))
                 job.log(f"{c['name']}: {count} caption words")
                 from .effects import light_filter
                 light = light_filter(opts.get("effect", "none"), opts.get("effect_intensity", 0.5),

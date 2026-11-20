@@ -48,10 +48,10 @@ class RollingBuffer:
 
     def check_space(self):
         if shutil.disk_usage(self.directory).free < self.min_free:
-            raise RuntimeError("Recording paused: less than 8 GiB free. Free some storage and try again.")
+            raise RuntimeError(f"Recording paused: less than {self.min_free / 1024**3:g} GiB free. Free some storage and try again.")
         size = sum(p.stat().st_size for p in self.directory.iterdir() if p.is_file())
         if size > self.max_bytes:
-            raise RuntimeError("Recording buffer reached its 3 GB disk limit.")
+            raise RuntimeError("Recording buffer reached its configured disk limit.")
 
     def refresh(self):
         path = self.directory / "segments.csv"

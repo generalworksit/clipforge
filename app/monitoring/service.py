@@ -1,4 +1,4 @@
-"""One-stream MVP supervisor. Configuration survives app restarts; recording resumes fresh."""
+"""Independent stream watchers with bounded recording slots and durable settings."""
 import base64
 import queue
 import re
@@ -13,8 +13,25 @@ from .detector import Detector
 from .processing import enqueue
 
 
+class CaptureSlots:
+    def __init__(self):
+        self.active = set()
+        self.lock = threading.Lock()
+
+    def acquire(self, monitor_id):
+        with self.lock:
+            if len(self.active) >= store.settings()["max_active"]:
+                return False
+            self.active.add(monitor_id)
+            return True
+
+    def release(self, monitor_id):
+        with self.lock:
+            self.active.discard(monitor_id)
+
+
 class Watch(threading.Thread):
-    def __init__(self, config):
+    def __init__(self, config, slots=None):
         super().__init__(daemon=True, name="clipforge-monitor")
         self.config = config
         self.stopped = threading.Event()
@@ -25,6 +42,7 @@ class Watch(threading.Thread):
         self.warning = ""
         self.started_at = time.time()
         self.buffer = None
+        self.slots = slots or CaptureSlots()
 
     def report(self, state, detail, **extra):
         store.runtime(self.config["id"], state=state, detail=detail, chat=self.chat_state,
@@ -53,10 +71,12 @@ class Watch(threading.Thread):
     def record(self, connector, info, key):
         self.report("connecting", "Opening the video feed", title=info["title"])
         encrypted = self.config.get("feed")
-        source = credentials._crypt(base64.b64decode(encrypted), True).decode() if encrypted else connector.resolve(self.config["url"])
+        resources = store.settings()
+        source = credentials._crypt(base64.b64decode(encrypted), True).decode() if encrypted else connector.resolve(self.config["url"], resources["quality"])
         if self.stopped.is_set():
             return
-        self.buffer = RollingBuffer(store.DATA / "buffers" / uuid.uuid4().hex, seconds=self.config["buffer"])
+        self.buffer = RollingBuffer(store.DATA / "buffers" / uuid.uuid4().hex, seconds=self.config["buffer"],
+            max_bytes=resources["buffer_mb"] * 1024**2 // resources["max_active"], min_free=resources["reserve_gb"] * 1024**3)
         detector = None; chat = None; at = 0; status = {}; latest = 0; last_progress = time.monotonic()
         last_check = time.monotonic(); audio_seen = set(); levels = []; history = []; pending = []
         self.started_at = time.time()
@@ -141,14 +161,21 @@ class Watch(threading.Thread):
                 if not credentials.configured():
                     self.report("needs_setup", "Add a YouTube Data API key to start monitoring.")
                     self.stopped.wait(10); continue
-                if shutil.disk_usage(store.DATA).free < 8 * 1024**3:
-                    self.report("storage_full", "Recording needs at least 8 GiB free. Free some storage; this monitor checks again in 30 seconds.")
+                if shutil.disk_usage(store.DATA).free < store.settings()["reserve_gb"] * 1024**3:
+                    self.report("storage_full", "Free disk space is below your recording reserve. Checking again in 30 seconds.")
                     self.stopped.wait(30); continue
                 self.report("checking", "Checking YouTube live status")
                 key = credentials.get_key()
                 info = connector.status(self.config["url"], key)
                 if info["state"] == "live":
-                    self.record(connector, info, key)
+                    if not self.slots.acquire(self.config["id"]):
+                        self.report("waiting", "Live; waiting for a recording slot", title=info["title"])
+                        self.stopped.wait(30)
+                        continue
+                    try:
+                        self.record(connector, info, key)
+                    finally:
+                        self.slots.release(self.config["id"])
                     delay = 15
                 else:
                     self.report(info["state"], "Next status check in 90 seconds", title=info["title"])
@@ -163,7 +190,12 @@ class Watch(threading.Thread):
 
 class Supervisor:
     def __init__(self):
-        self.stopped = threading.Event(); self.thread = None; self.watch = None
+        self.stopped = threading.Event(); self.thread = None
+        self.watches = {}; self.slots = CaptureSlots(); self.lock = threading.RLock()
+
+    @property
+    def watch(self):
+        return next(iter(self.watches.values()), None)
 
     def start(self):
         if self.thread and self.thread.is_alive():
@@ -182,32 +214,40 @@ class Supervisor:
 
     def run(self):
         while not self.stopped.wait(1):
-            configs = [{k: v for k, v in c.items() if k != "runtime"} for c in store.all_monitors() if c["enabled"]]
-            config = configs[0] if configs else None
-            if self.watch and (self.watch.config != config or self.stopped.is_set()):
-                self.watch.stopped.set()
-            if self.watch and not self.watch.is_alive():
-                self.watch = None
-            if config and not self.watch:
-                self.watch = Watch(config); self.watch.start()
-        if self.watch:
-            self.watch.stopped.set()
+            configs = {c["id"]: {k: v for k, v in c.items() if k != "runtime"} for c in store.all_monitors() if c["enabled"]}
+            with self.lock:
+                for mid, watch in list(self.watches.items()):
+                    if watch.config != configs.get(mid):
+                        watch.stopped.set()
+                    if not watch.is_alive():
+                        del self.watches[mid]
+                for mid, config in configs.items():
+                    if mid not in self.watches:
+                        watch = Watch(config, self.slots); self.watches[mid] = watch; watch.start()
+        with self.lock:
+            for watch in self.watches.values():
+                watch.stopped.set()
 
     def close(self):
         self.stopped.set()
-        if self.watch:
-            self.watch.stopped.set()
         if self.thread:
             self.thread.join(timeout=3)
-        if self.watch:
-            self.watch.join(timeout=50)
-            if self.watch.buffer:
-                self.watch.buffer.close()
+        with self.lock:
+            watches = list(self.watches.values())
+        for watch in watches:
+            watch.stopped.set()
+            if watch.buffer:
+                watch.buffer.close()
+        deadline = time.monotonic() + 50
+        for watch in watches:
+            watch.join(timeout=max(0, deadline-time.monotonic()))
 
     def mark(self, monitor_id):
-        if not self.watch or self.watch.config["id"] != monitor_id or not self.watch.buffer or not self.watch.buffer.segments:
-            raise ValueError("Wait until this monitor has buffered some video.")
-        self.watch.manual.set()
+        with self.lock:
+            watch = self.watches.get(monitor_id)
+            if not watch or not watch.buffer or not watch.buffer.segments:
+                raise ValueError("Wait until this monitor has buffered some video.")
+            watch.manual.set()
 
 
 supervisor = Supervisor()

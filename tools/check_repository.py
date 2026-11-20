@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 names = subprocess.check_output(["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"], cwd=ROOT).decode().split("\0")
-blocked = {"jobs", "models", "monitor-data", ".venv", "artifacts", "_backup_2026-11-19"}
+blocked = {"jobs", "models", "monitor-data", "publishing-data", ".venv", "artifacts", "_backup_2026-11-19"}
 patterns = [rb"AIza[0-9A-Za-z_-]{35}", rb"gh[pousr]_[0-9A-Za-z]{30,}", rb"-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----"]
 local_secrets = []
 if (ROOT / ".live-token").is_file():

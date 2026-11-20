@@ -1367,3 +1367,9 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
 .nav a[data-health="fail"]::before { background: var(--red); }
 .health-list li { align-items: start; }
 .health-list .health-dot { align-self: start; margin-top: 6px; }
+
+#publish-draft input[type=datetime-local] { width:100%; min-width:0; min-height:40px; padding:8px 12px; font:inherit; color:var(--ink); background:var(--s1); border:1px solid var(--line-2); border-radius:8px; }
+#publish-limit { margin-bottom:20px; }
+#publish-limit button { margin-top:8px; }
+#publish-client input[type=file] { max-width:100%; font:inherit; }
+#caption-timing-form { display:grid; gap:12px; margin:16px 0; max-width:580px; }

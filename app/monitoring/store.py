@@ -20,12 +20,24 @@ def db():
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("CREATE TABLE IF NOT EXISTS monitors (id TEXT PRIMARY KEY, config TEXT NOT NULL, runtime TEXT NOT NULL)")
         connection.execute("CREATE TABLE IF NOT EXISTS quota (at REAL NOT NULL, cost INTEGER NOT NULL)")
+        connection.execute("CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY, value TEXT NOT NULL)")
         yield connection
 
 
 def all_monitors():
     with db() as c:
         return [{"id": r["id"], **json.loads(r["config"]), "runtime": json.loads(r["runtime"])} for r in c.execute("SELECT * FROM monitors ORDER BY rowid DESC")]
+
+
+def settings():
+    with db() as c:
+        row = c.execute("SELECT value FROM settings WHERE id=1").fetchone()
+        return {"max_active": 2, "buffer_mb": 2048, "reserve_gb": 8, "quality": "720p", **(json.loads(row[0]) if row else {})}
+
+
+def save_settings(values):
+    with db() as c:
+        c.execute("INSERT INTO settings VALUES (1,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value", (json.dumps(values),))
 
 
 def save(config, monitor_id=None):

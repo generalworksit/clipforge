@@ -48,6 +48,8 @@ with sync_playwright() as p:
     page.locator("#timing summary").click()
     page.locator("#pre").fill("25"); page.locator("#pre").press("Tab")
     page.wait_for_function("__storage.options.pre===25")
+    page.locator("#silent").check()
+    page.wait_for_function("__storage.options.listen===false && __commands.includes('LISTEN')")
     page.locator("#timing summary").click()
     expect(page.locator("#conn-text")).to_have_text("Connected")
     assert page.locator("#start").is_disabled()

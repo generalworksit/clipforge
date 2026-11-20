@@ -134,7 +134,7 @@ def render(job) -> None:
                                                   task="translate" if o["translate"] else "transcribe")
                 s["language"] = transcript["language"]
         with job.stage("caption"):
-            words = moments.all_words(transcript)
+            words = captions.shift_words(moments.all_words(transcript), o.get("caption_offset_ms", 0), duration)
             jobs.install_fonts(job.dir)
             ass = captions.build_ass(words, duration, o["preset"], "middle", size=(p["width"], p["height"]), anchor_y=p["caption_y"])
             (job.dir / "captions.ass").write_text(ass, encoding="utf-8")

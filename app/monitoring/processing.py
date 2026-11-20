@@ -1,10 +1,19 @@
 """Live captures enter the normal durable, single-GPU job queue."""
 import json
 import re
+import threading
 from .. import jobs
 
 
+_enqueue_lock = threading.Lock()
+
+
 def enqueue(buffer, event, monitor, info):
+    with _enqueue_lock:
+        return _enqueue(buffer, event, monitor, info)
+
+
+def _enqueue(buffer, event, monitor, info):
     pending = [j for j in jobs.list_jobs("autoclip") if j["state"] in ("queued", "running", "receiving")]
     if len(pending) >= 10:
         raise RuntimeError("The clip queue is full (10). New candidates are skipped until an export finishes.")
@@ -73,7 +82,7 @@ def render(job):
             vi = video.probe(rendered)
             job.output(rendered, "Vertical 9:16 · clean", "video", " (vertical)", duration=vi.duration, width=vi.width, height=vi.height)
         if transcript:
-            words = moments.all_words(transcript)
+            words = captions.shift_words(moments.all_words(transcript), o.get("caption_offset_ms", 0), mi.duration)
             for name, content in (("subtitles.srt", captions.build_srt(words, mi.duration)),
                                   ("subtitles.vtt", captions.build_vtt(words, mi.duration))):
                 path = job.dir / name; path.write_text(content, encoding="utf-8")

@@ -10,6 +10,12 @@ async function renderMonitor() {
         <form id="monitor-key-form"><label class="field"><span class="label">YouTube Data API key</span><input name="key" type="password" placeholder="Google Cloud API key" autocomplete="off" minlength="15" maxlength="256" required></label><button class="ghost" type="submit">Save key securely</button><button class="ghost" type="button" id="monitor-test-key">Test connection</button></form>
         <p class="hint-s">Enable YouTube Data API v3 in your Google Cloud project. Your key is protected by Windows on this PC. This prototype uses public stream status and available chat; it does not connect through vidIQ.</p><a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">Open API setup ↗</a>
       </details>
+      <details class="live-setup"><summary>Recording limits</summary><form id="monitor-resources">
+        <label class="field">Simultaneous recordings<input name="max_active" type="number" min="1" max="4" value="2" required></label>
+        <label class="field">Recording quality<select name="quality"><option>480p</option><option selected>720p</option><option>1080p</option></select></label>
+        <label class="field">Total buffer budget (MB)<input name="buffer_mb" type="number" min="512" max="8192" value="2048" required></label>
+        <label class="field">Keep free (GiB)<input name="reserve_gb" type="number" min="2" max="100" value="8" required></label>
+        <button class="ghost">Save limits</button><p class="hint-s">Applies to new recordings. Extra live streams wait for a slot. Recording is silent and includes source audio.</p></form></details>
       <form class="monitor-form" id="monitor-form"><h2 id="monitor-form-title">Add a livestream</h2>
         <label class="field"><span class="label">YouTube livestream URL</span><input name="url" type="url" placeholder="https://www.youtube.com/watch?v=…" required></label>
         <p class="hint-s">Use a specific stream link. Automatic channel discovery, Twitch and Kick are later stages.</p>
@@ -29,7 +35,7 @@ async function renderMonitor() {
         <label class="monitor-check"><input name="clear_feed" type="checkbox"> Remove saved feed and use Streamlink</label>
         <p class="hint-s">Without a feed, Streamlink attempts to open the livestream. Use content and a recording method you have permission to use. API access alone does not grant download permission.</p></details>
         <div class="live-actions"><button class="primary" type="submit" id="monitor-save">Save stream</button><button class="ghost" type="button" id="monitor-cancel" hidden>Cancel edit</button></div>
-      </form><p class="hint-s">One active stream and one heavy export at a time in this MVP. Keep ClipForge running and Windows awake. Enabled monitors resume after the app restarts.</p>
+      </form><p class="hint-s">Streams record independently; exports share one processing queue. Keep ClipForge running and Windows awake. Enabled monitors resume after the app restarts.</p>
     </aside><div class="monitor-main"><p class="error-box" id="monitor-error" role="alert" hidden></p><p id="monitor-notice" role="status"></p>
       <div class="section-head"><h2>Streams</h2><span class="muted" id="monitor-count"></span></div><div id="monitor-streams"></div>
       <div class="section-head"><h2>Captured moments</h2><a href="#/library?kind=autoclip">Open library →</a></div><div id="monitor-clips"></div>
@@ -39,6 +45,8 @@ async function renderMonitor() {
   const showFailure = e => {if (error.isConnected) {error.textContent=e.message;error.hidden=false;}};
   const post = (path, body, method="POST") => api(path,{method,headers:{"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)})});
   const notice = text => {document.getElementById("monitor-notice").textContent=text; error.hidden=true;};
+  const resourceForm=document.getElementById("monitor-resources");let resourcesLoaded=false;
+  resourceForm.onsubmit=async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(resourceForm));for(const k of ["max_active","buffer_mb","reserve_gb"])data[k]=Number(data[k]);try{await post("/api/monitor/settings",data,"PUT");notice("Recording limits saved for new captures.");await refresh();}catch(e){showFailure(e);}};
   function reset() {editing=null;form.reset();document.getElementById("monitor-form-title").textContent="Add a livestream";document.getElementById("monitor-save").textContent="Save stream";document.getElementById("monitor-cancel").hidden=true;}
   document.getElementById("monitor-cancel").onclick=reset;
   document.getElementById("monitor-test-key").onclick=async e=>{
@@ -79,12 +87,13 @@ async function renderMonitor() {
     try {
       const [data,clips]=await Promise.all([api("/api/monitor"),api("/api/jobs?kind=autoclip")]);if(!streams.isConnected)return;
       state=data;
+      if(!resourcesLoaded&&data.settings){for(const [key,value] of Object.entries(data.settings))if(resourceForm.elements[key])resourceForm.elements[key].value=value;resourcesLoaded=true;}
       document.getElementById("monitor-engine").textContent=`${data.engine_running?"Monitor service running":"Monitor service stopped"} · ${fmtSize(data.free_bytes)} free · ${data.quota_used}/${data.quota_budget} local API budget`;
       document.getElementById("monitor-key-status").textContent=data.key_configured?"Key saved":"Setup needed";
-      const storage=document.getElementById("monitor-storage");storage.hidden=data.free_bytes>=8*1024**3;storage.textContent="Recording needs at least 8 GiB free on the ClipForge drive. Free some storage before starting a capture. Saved settings and existing clips remain available.";
+      const reserve=data.settings?.reserve_gb||8,storage=document.getElementById("monitor-storage");storage.hidden=data.free_bytes>=reserve*1024**3;storage.textContent=`Recording needs ${reserve} GiB free on the ClipForge drive. Change the reserve in Recording limits or free some storage.`;
       if(!data.key_configured)document.getElementById("monitor-key-setup").open=true;
       const presets=document.getElementById("monitor-presets");if(presets.options.length===1){presets.innerHTML=data.presets.map(p=>`<option value="${esc(p.id)}">${esc(p.label)}</option>`).join("");}
-      document.getElementById("monitor-count").textContent=`${data.monitors.filter(c=>c.enabled).length} active / ${data.monitors.length} saved`;
+      document.getElementById("monitor-count").textContent=`${data.monitors.filter(c=>c.runtime?.state==="recording").length}/${data.max_active} recording · ${data.monitors.filter(c=>c.enabled).length} enabled`;
       const version=JSON.stringify(data.monitors);
       if(version!==streamsVersion){streamsVersion=version;streams.innerHTML=data.monitors.length?data.monitors.map(c=>{
         const r=c.runtime||{},d=r.detector||{},points=r.history||[],peak=Math.max(1,...points),names={disabled:"Paused",needs_setup:"Connection needed",checking:"Checking status",upcoming:"Scheduled",offline:"Offline",connecting:"Opening feed",buffering:"Building buffer",recording:"Recording",retrying:"Retrying",starting:"Starting"};

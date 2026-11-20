@@ -15,6 +15,21 @@ class KeyInput(BaseModel):
     key: str = Field(min_length=15, max_length=256)
 
 
+class ResourceInput(BaseModel):
+    max_active: int = Field(default=2, ge=1, le=4)
+    buffer_mb: int = Field(default=2048, ge=512, le=8192)
+    reserve_gb: int = Field(default=8, ge=2, le=100)
+    quality: str = "720p"
+
+
+@router.put("/settings")
+def resource_settings(body: ResourceInput):
+    if body.quality not in {"480p", "720p", "1080p"}:
+        raise HTTPException(400, "Choose 480p, 720p or 1080p.")
+    store.save_settings(body.model_dump())
+    return store.settings()
+
+
 class MonitorInput(BaseModel):
     url: str = Field(max_length=2048)
     feed: str = Field(default="", max_length=4096)
@@ -47,7 +62,7 @@ def overview():
         c["has_feed"] = bool(c.pop("feed", "")); monitors.append(c)
     store.DATA.mkdir(parents=True, exist_ok=True)
     return {"monitors": monitors, "key_configured": credentials.configured(), "quota_used": store.quota_used(),
-            "quota_budget": 8500, "max_active": 1, "free_bytes": shutil.disk_usage(store.DATA).free,
+            "quota_budget": 8500, "max_active": store.settings()["max_active"], "settings": store.settings(), "free_bytes": shutil.disk_usage(store.DATA).free,
             "engine_running": bool(supervisor.thread and supervisor.thread.is_alive()),
             "presets": [{"id": k, "label": v["label"]} for k, v in PRESETS.items()]}
 
@@ -98,8 +113,6 @@ def add(body: MonitorInput):
         raise HTTPException(400, "This prototype supports up to 20 saved stream URLs.")
     c = validate(body)
     with store._lock:
-        if c["enabled"] and any(m["enabled"] for m in store.all_monitors()):
-            raise HTTPException(409, "Pause the active monitor first. This MVP records one stream at a time.")
         return {"id": store.save(c)}
 
 
@@ -120,8 +133,6 @@ def update(monitor_id: str, body: MonitorInput):
 def toggle(monitor_id: str):
     with store._lock:
         c = find(monitor_id); c.pop("runtime")
-        if not c["enabled"] and any(m["enabled"] for m in store.all_monitors()):
-            raise HTTPException(409, "Pause the active monitor first. This MVP records one stream at a time.")
         c["enabled"] = not c["enabled"]
         c.pop("id"); store.save(c, monitor_id)
         return {"enabled": c["enabled"]}
