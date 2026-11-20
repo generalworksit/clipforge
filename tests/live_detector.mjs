@@ -66,5 +66,8 @@ const regularRequests=new Detector();
 for(let t=0;t<120;t++){regularRequests.add(t,burst(4,`clip that ${t}`).map((m,i)=>({...m,author:`r${t}-${i}`})));assert.equal(regularRequests.tick(t).active,null,"ordinary requests become baseline");}
 const staleRequests=warm(new Detector());staleRequests.add(25,burst(4,"clip that"));
 for(let t=25;t<40;t++)assert.equal(staleRequests.tick(t).active,null,"stale requests cannot confirm themselves");
+const unrelated=warm(new Detector());unrelated.add(25,burst(4,"clip that"));unrelated.tick(25);
+unrelated.add(26,burst(2,"hello").map(m=>({...m,author:m.author+'new'})));
+assert.equal(unrelated.tick(26).active,null,"unrelated messages cannot confirm old viewer requests");
 console.log("PASS: baseline, busy-chat reaction shift, fresh-message confirmation, small chats, command/link filtering, repeat spam, lead-in, merged bursts, precise quiet tail, cooldown, max duration, manual save, sound opt-in");
 console.log("PASS: multilingual viewer clip requests, negation, distinct viewers, repeated-request baseline and fresh confirmation.");

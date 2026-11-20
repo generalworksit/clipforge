@@ -119,6 +119,8 @@ class LiveTests(unittest.TestCase):
     def test_detection_evidence_validation(self):
         evidence = {"version": 2, "signals": ["reaction_shift"], "score": 80, "unique": 12, "reactionShare": .7, "rateLift": 1.1}
         self.assertEqual(live.validate(json.dumps(metadata(detection=evidence)), 2)["detection"], evidence)
+        requested = evidence | {"signals": ["viewer_requests"]}
+        self.assertEqual(live.validate(json.dumps(metadata(detection=requested)), 2)["detection"], requested)
         from fastapi import HTTPException
         for changes in ({"score":101}, {"rateLift":float("nan")}, {"signals":["made_up"]}, {"reactionShare":1.5}):
             with self.assertRaises(HTTPException):

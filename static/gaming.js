@@ -31,7 +31,7 @@ async function renderGaming(params = {}) {
   const root = view.querySelector(".gaming-page"), $ = id => root.querySelector(`#gaming-${id}`);
   const video = $("video"), canvas = $("source-frame"), preview = $("preview"), ctx = canvas.getContext("2d"), out = preview.getContext("2d");
   let settings = {mode:"stack",camera:[0,.6,.3,.4],game:[0,0,1,1],share:.38,order:"camera",camera_fit:"contain",game_fit:"contain",mirror:false,resolution:1080,captions_at:"seam"};
-  let edits=0, region="camera", source=null, objectURL=null, renderPlan=null, sequence=0, sourceSequence=0, drag=null, submitting=false, presets=[];
+  let edits=0, region="camera", source=null, objectURL=null, renderPlan=null, sequence=0, sourceSequence=0, drag=null, submitting=false, presets=[], autoRun=null;
   const fail = message => { $("error").textContent=message; $("error").hidden=!message; };
   const message = text => { $("message").textContent=text; };
   const escape = text => String(text).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -56,6 +56,7 @@ async function renderGaming(params = {}) {
   }
   function loadSource(url, selection){
     $("import").disabled=false;
+    autoRun?.abort();autoRun=null;delete $("auto").dataset.busy;$("auto").disabled=true;$("auto").textContent="Auto detect";
     sourceSequence++; if(objectURL)URL.revokeObjectURL(objectURL);objectURL=selection.file?url:null;
     video.pause();video.removeAttribute("src");video.load();source=selection;renderPlan=null;sequence++;$("export").disabled=true;
     video.src=url;video.load();message(selection.name||"Video loaded");fail("");
@@ -85,8 +86,9 @@ async function renderGaming(params = {}) {
   root.querySelectorAll("[data-region]").forEach(button=>button.onclick=()=>{region=button.dataset.region;controls();});
   root.querySelectorAll("[data-coord]").forEach(input=>input.onchange=()=>{edits++;settings[region][Number(input.dataset.coord)]=Number(input.value)/100;updatePlan();});
   async function autoDetect(asked=true){
-    if(!source||!video.videoWidth||$("auto").dataset.busy)return;
+    if(!source||!video.videoWidth||$("auto").dataset.busy||(!asked&&edits>0))return;
     const version=sourceSequence, before=edits, button=$("auto"), back=video.currentTime, wasPaused=video.paused;
+    const run=new AbortController();autoRun=run;
     button.dataset.busy="1";button.disabled=true;button.textContent="Detecting…";fail("");message("Looking for the webcam…");
     try{
       video.pause();
@@ -94,20 +96,27 @@ async function renderGaming(params = {}) {
       const g=grab.getContext("2d"), data=new FormData(), d=video.duration||1;
       for(let i=0;i<8;i++){
         const at=Math.min(d-.05,d*(.08+.84*i/7));
-        await new Promise((ok,bad)=>{const t=setTimeout(()=>bad(Error("The video did not seek. Try again.")),8000);video.addEventListener("seeked",()=>{clearTimeout(t);ok();},{once:true});video.currentTime=at;});
+        await new Promise((ok,bad)=>{
+          const finish=error=>{clearTimeout(timer);video.removeEventListener("seeked",ready);video.removeEventListener("loadeddata",ready);run.signal.removeEventListener("abort",aborted);error?bad(error):ok();};
+          const ready=()=>{if(video.readyState>=2&&!video.seeking)finish();};
+          const aborted=()=>finish(new DOMException("Source changed","AbortError"));
+          const timer=setTimeout(()=>finish(Error("The video did not seek. Try again.")),8000);
+          video.addEventListener("seeked",ready);video.addEventListener("loadeddata",ready);run.signal.addEventListener("abort",aborted,{once:true});
+          video.currentTime=Math.max(0,at);ready();
+        });
         g.drawImage(video,0,0,grab.width,grab.height);
         data.append("frames",await new Promise(ok=>grab.toBlob(ok,"image/jpeg",.85)),`f${i}.jpg`);
         if(!root.isConnected||version!==sourceSequence)return;
       }
-      const result=await api("/api/layouts/auto",{method:"POST",body:data});
+      const result=await api("/api/layouts/auto",{method:"POST",body:data,signal:run.signal});
       if(!root.isConnected||version!==sourceSequence)return;
       if(edits!==before){message("Auto detect skipped: you already changed the layout. Press Auto detect to run it again.");return;}
       if(!result.found&&!asked){message("No webcam found automatically. Draw it yourself, or keep gameplay only.");return;}
       settings={...settings,...result.settings};region=result.settings.mode==="game"?"game":"camera";
       message(result.message);
       updatePlan();
-    }catch(e){if(root.isConnected)fail(e.message);}
-    finally{if(root.isConnected){delete button.dataset.busy;button.disabled=!source;button.textContent="Auto detect";video.currentTime=back;if(!wasPaused)video.play().catch(()=>{});}}
+    }catch(e){if(e.name!=="AbortError"&&root.isConnected&&version===sourceSequence)fail(e.message);}
+    finally{if(root.isConnected&&autoRun===run){autoRun=null;delete button.dataset.busy;button.disabled=!source;button.textContent="Auto detect";video.currentTime=back;if(!wasPaused&&edits===before)video.play().catch(()=>{});}}
   }
   $("auto").onclick=()=>autoDetect(true);
   $("full").onclick=()=>{edits++;settings[region]=[0,0,1,1];updatePlan();};
@@ -137,7 +146,7 @@ async function renderGaming(params = {}) {
     out.drawImage(video,sx,sy,sw,sh,x+(w-dw)/2,y+(h-dh)/2,dw,dh);out.restore();
   }
   function draw(){
-    if(!root.isConnected){video.pause();video.removeAttribute("src");video.load();if(objectURL)URL.revokeObjectURL(objectURL);return;}
+    if(!root.isConnected){autoRun?.abort();video.pause();video.removeAttribute("src");video.load();if(objectURL)URL.revokeObjectURL(objectURL);return;}
     ctx.fillStyle="#101318";ctx.fillRect(0,0,canvas.width,canvas.height);out.fillStyle="#000";out.fillRect(0,0,preview.width,preview.height);
     if(video.readyState>=2){ctx.drawImage(video,0,0,canvas.width,canvas.height);
       for(const name of ["game","camera"]){if(name==="camera"&&settings.mode==="game")continue;const [x,y,w,h]=settings[name];ctx.save();ctx.lineWidth=name===region?4:2;ctx.strokeStyle=name==="camera"?"#7cb8ff":"#fff";ctx.setLineDash(name===region?[]:[8,6]);ctx.strokeRect(x*canvas.width,y*canvas.height,w*canvas.width,h*canvas.height);ctx.setLineDash([]);ctx.font="18px sans-serif";ctx.fillStyle="#101318";ctx.fillRect(x*canvas.width,y*canvas.height,100,26);ctx.fillStyle="#fff";ctx.fillText(name==="camera"?"Webcam":"Gameplay",x*canvas.width+6,y*canvas.height+19);ctx.restore();}

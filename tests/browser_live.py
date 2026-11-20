@@ -139,6 +139,7 @@ with tempfile.TemporaryDirectory() as tmp, patch.object(jobs, "JOBS_DIR", Path(t
             page.locator(".live-card video").wait_for()
             page.wait_for_function("document.querySelector('.live-card video').readyState >= 1")
             assert page.get_by_role("link", name="Download MP4").count() == 1
+            expect(page.locator(".live-card").get_by_role("link", name="Gaming layout")).to_have_attribute("href", f"#/gaming?from={job_id}&file=highlight.mp4")
             page.get_by_role("button", name="Show pairing key").click()
             page.locator("#live-key-box").wait_for(state="visible")
             assert page.locator("#live-key").input_value() == key

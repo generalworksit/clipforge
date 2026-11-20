@@ -70,7 +70,7 @@ def validate(raw: str, count: int) -> dict:
         detection = None
         if data.get("detection") is not None:
             evidence = data["detection"]
-            allowed = {"chat_surge", "reaction_shift", "crowd_surge", "sound_spike"}
+            allowed = {"chat_surge", "reaction_shift", "crowd_surge", "sound_spike", "viewer_requests"}
             if not isinstance(evidence, dict) or evidence.get("version") != 2 or not isinstance(evidence.get("signals"), list) or not 1 <= len(evidence["signals"]) <= 4 or any(s not in allowed for s in evidence["signals"]):
                 raise ValueError("Invalid detection signals.")
             detection = {"version": 2, "signals": evidence["signals"]}

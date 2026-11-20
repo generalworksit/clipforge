@@ -19,6 +19,7 @@ Licenses above describe the inspected revisions, not every historical release. R
 
 - **Gaming layout** page, reachable from the navigation and video results.
 - Independent webcam and gameplay rectangles, drawn on the source or adjusted numerically.
+- Claude's integrated local Auto detect proposes a stationary face/webcam region from sampled frames. Manual edits are preserved and switching source cancels stale suggestions. Review the region: a steady game character can still look like a webcam.
 - Stacked camera/game, small-camera overlay and game-only compositions; swap order, mirror camera and change camera size.
 - Fit the complete selected region to preserve HUD information, or crop to fill it. No stretching.
 - Real-time local composition preview, using the backend's exact render plan.
@@ -27,6 +28,7 @@ Licenses above describe the inspected revisions, not every historical release. R
 - Trim up to three minutes, 720p/1080p vertical export, original audio retained, and silent-source support.
 - Existing caption styles or No captions; optional English translation. Caption placement can follow the webcam/game division.
 - Existing queue, file permissions, retries, library and export handling are reused.
+- Viewer clip requests are additional chat evidence: English, French and Russian phrases, distinct-author thresholds, adaptive baseline, negation/spam filtering and fresh-message confirmation. This is a local heuristic, not game-event recognition.
 
 Files: `app/layouts.py`, API/worker integration, optional caption anchor in `app/captions.py`, and `static/gaming.js|css`. The preview never substitutes invented clip or detector status.
 
@@ -36,7 +38,7 @@ ClipForge already has word timestamps, multilingual Whisper, light effects, face
 
 ## Follow-up work, not claimed complete
 
-1. Conservative webcam suggestions: distinguish real webcams from game characters and admit uncertainty. Manual correction must remain available.
+1. Evaluate and refine the automatic webcam suggestions on permitted real streams, especially game faces, full-screen cutaways and borderless webcams. Current suggestions need visual review.
 2. Per-scene layout changes: a static streamer preset cannot handle every full-screen cutaway or camera switch.
 3. GTA event profiles: source-grounded transcript events, with component scores and negation handling, then evaluation on permitted real gameplay. Loudness or motion alone cannot prove a crash or a mission outcome.
 4. Reliable additional background platform connectors. Recorded URL support does not establish authenticated Twitch/Kick live monitoring.
@@ -46,6 +48,8 @@ ClipForge already has word timestamps, multilingual Whisper, light effects, face
 
 `tests/test_layouts.py` uses generated source regions and actual FFmpeg. It checks output pixel colors, dimensions, trim duration, audio/silent input, ordering, inset placement, whole-region fit, caption rendering, invalid geometry and cross-origin rejection. Its subtitle fixture tests rendering, not recognition accuracy.
 
-`tests/browser_gaming.py` exercises actual local APIs with temporary jobs, crop drawing, preset persistence, mobile layout and a real MP4 export. Reference applications themselves were not installed or executed.
+`tests/browser_gaming.py` exercises actual local APIs with temporary jobs, crop drawing, preset persistence, mobile layout and a real MP4 export. Delayed suggestion responses are explicitly stubbed for source-switch/manual-edit race checks; those cases do not measure face detection. Reference applications themselves were not installed or executed.
+
+`tests/live_detector.mjs` covers viewer requests alongside reaction spikes, including negation, repeat spam, stable request baselines and stale-message rejection. Server evidence validation accepts the new signal; browser live testing checks the direct gaming-editor link on a captured clip.
 
 An additional real speech check used our existing original generated fixture, cached Whisper small on CPU, and FFmpeg: a 15-second 720×1280 MP4 with audio, 47 timed English words, SRT/VTT and animated captions anchored at the split. No transcript mock was used for that check. Its local evidence is under `artifacts/gaming-smoke-7870d75c/`; this does not validate real GTA gameplay or automatic webcam recognition.

@@ -70,7 +70,7 @@ with tempfile.TemporaryDirectory() as tmp, patch.object(jobs, "JOBS_DIR", Path(t
         expect(page.locator("#gaming-resolution")).to_have_value("720")
         expect(page.locator("#gaming-share-label")).to_have_text("40%")
         expect(page.locator("#gaming-export")).to_be_enabled()
-        # Both light and dark themes remain readable without horizontal overflow.
+        # Desktop and mobile layouts stay within the viewport.
         artifacts=ROOT/"artifacts";artifacts.mkdir(exist_ok=True)
         page.evaluate("window.scrollTo(0,0)")
         page.screenshot(path=str(artifacts/"gaming-editor-desktop.png"),full_page=True)
@@ -95,6 +95,41 @@ with tempfile.TemporaryDirectory() as tmp, patch.object(jobs, "JOBS_DIR", Path(t
         out=video.probe(jobs.job_dir(result["id"])/"gaming.mp4")
         assert (out.width,out.height)==(720,1280) and abs(out.duration-1.5)<.1 and out.has_audio
         assert media.exists(), "Original clip must remain untouched"
+        # Delayed suggestions test editor coordination, not face-recognition accuracy.
+        pending=[]
+        page.route("**/api/layouts/auto", lambda route: pending.append(route))
+        def resolve_suggestion():
+            # Playwright's request event may precede dispatch of its route callback.
+            for _ in range(100):
+                if pending:
+                    pending.pop(0).fulfill(json=suggestion)
+                    return
+                page.wait_for_timeout(50)
+            raise AssertionError("Suggestion request was not intercepted")
+        with page.expect_request("**/api/layouts/auto"):
+            page.goto(f"{BASE}/#/gaming?from={source_job.id}&file=highlight.mp4")
+        page.locator('[data-coord="2"]').fill("35")
+        page.locator('[data-coord="2"]').press("Tab")
+        suggestion={"found":True,"settings":{"mode":"pip","camera":[0,0,.25,.5]},"message":"Test suggestion"}
+        resolve_suggestion()
+        expect(page.locator("#gaming-auto")).to_have_text("Auto detect")
+        expect(page.locator("#gaming-mode")).to_have_value("stack")
+        expect(page.locator('[data-coord="2"]')).to_have_value("35.0")
+        # A new source preserves edited settings and cancels the old automatic task.
+        with page.expect_request("**/api/layouts/auto"):
+            page.locator("#gaming-auto").click()
+        page.locator("#gaming-upload").set_input_files(str(media))
+        expect(page.locator("#gaming-auto")).to_have_text("Auto detect")
+        expect(page.locator("#gaming-auto")).to_be_enabled()
+        resolve_suggestion()
+        expect(page.locator("#gaming-mode")).to_have_value("stack")
+        expect(page.locator('[data-coord="2"]')).to_have_value("35.0")
+        with page.expect_request("**/api/layouts/auto"):
+            page.locator("#gaming-auto").click()
+        resolve_suggestion()
+        expect(page.locator("#gaming-mode")).to_have_value("pip")
+        expect(page.locator("#gaming-auto")).to_have_text("Auto detect")
         assert not errors,errors
         browser.close()
 print("PASS: local/library source, drawing regions, saved-layout persistence, desktop/mobile preview, real API submission and MP4 export (generated footage).")
+print("PASS: delayed suggestion respects manual edits, source changes cancel old tasks, and explicit retry applies the new suggestion (stubbed detection response).")
