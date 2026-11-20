@@ -120,7 +120,7 @@ def live_extension():
 def index() -> HTMLResponse:
     """index.html with versioned asset URLs, so an update never runs a cached old app.js/style.css."""
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    for name in ("app.js", "monitor.js", "style.css"):
+    for name in ("app.js", "monitor.js", "style.css", "gaming.js", "gaming.css"):
         version = int((STATIC_DIR / name).stat().st_mtime)
         html = html.replace(f"/static/{name}\"", f"/static/{name}?v={version}\"")
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
@@ -248,6 +248,35 @@ def _redraw_options(ai: bool, strength: str) -> dict:
     return {"thumbs_ai": ai, "thumbs_strength": strength}
 
 
+@app.post("/api/layouts/plan")
+def layout_plan(layout: str = Form(...), width: int = Form(...), height: int = Form(...)) -> dict:
+    from . import layouts
+    try:
+        if len(layout) > 4096:
+            raise ValueError("Layout settings are too large.")
+        return layouts.plan(json.loads(layout), width, height)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(400, str(exc)) from None
+
+
+@app.post("/api/layouts/auto")
+def layout_auto(frames: list[UploadFile] = File(...)) -> dict:
+    """Find the webcam and gameplay regions from a few frames the editor grabbed."""
+    from . import layouts
+    if not 1 <= len(frames) <= layouts.AUTO_MAX_FRAMES:
+        raise HTTPException(400, f"Send 1 to {layouts.AUTO_MAX_FRAMES} frames.")
+    images = []
+    for f in frames:
+        data = f.file.read(3_000_001)
+        if len(data) > 3_000_000:
+            raise HTTPException(400, "A frame is too large.")
+        images.append(data)
+    try:
+        return layouts.auto_regions(images)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+
+
 @app.post("/api/jobs", status_code=201)
 async def create_job(
     kind: str = Form("clips"),
@@ -279,16 +308,30 @@ async def create_job(
     thumbs_strength: str = Form("normal"),
     effect: str = Form("none"),
     effect_intensity: float = Form(0.5),
+    layout: str = Form("{}"),
 ) -> dict:
-    if kind not in ("clips", "subtitles", "convert", "voice"):
+    if kind not in ("clips", "subtitles", "convert", "voice", "layout"):
         raise HTTPException(400, f"Unknown tool '{kind}'. Downloads go to /api/downloads.")
     if preset not in PRESETS:
         raise HTTPException(400, f"Unknown caption preset '{preset}'.")
-    if preset == "none" and kind != "clips":
+    if preset == "none" and kind not in ("clips", "layout"):
         raise HTTPException(400, "No captions is available in Clip maker. For subtitles, turn off Burn captions instead.")
     if position not in POSITIONS:
         raise HTTPException(400, f"Unknown caption position '{position}'.")
-    if kind == "clips":
+    if kind == "layout":
+        from . import layouts
+        try:
+            if len(layout) > 4096:
+                raise ValueError("Layout settings are too large.")
+            opts = {"layout": layouts.validate(json.loads(layout)),
+                    "start": layouts.number(start, "Start", 0, 86400), "end": layouts.number(end, "End", 0, 86400),
+                    "preset": preset, "translate": _flag(translate)}
+            if end and (end <= start or end-start > 180):
+                raise ValueError("Choose an end after the start, up to 180 seconds long.")
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(400, str(exc)) from None
+        exts = VIDEO_EXTS
+    elif kind == "clips":
         opts, exts = {"preset": preset, "position": position}, VIDEO_EXTS
         opts.update(_effect_options(effect, effect_intensity))
         opts.update(_pick_options(clips, length, clip_mode, cats, framing), erase_subs=_flag(erase_subs),
@@ -685,6 +728,13 @@ def system() -> dict:
         "config_path": str(CONFIG_PATH),
         "python": sys.version.split()[0],
     }
+
+
+@app.get("/api/system/check")
+def system_check() -> dict:
+    """Quick health check of everything ClipForge needs (see app/health.py)."""
+    from . import health
+    return health.run()
 
 
 @app.post("/api/system/update-downloader")

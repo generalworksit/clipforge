@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {Detector, reaction, settings} from "../extension/detector.mjs";
+import {Detector, reaction, nomination, settings} from "../extension/detector.mjs";
 
 const burst = (n = 30, text = "LMAO 😂") => Array.from({length: n}, (_, i) => ({author: `viewer-${i}`, text}));
 const warm = (d) => { for (let t = 0; t <= 24; t++) d.tick(t); return d; };
@@ -52,4 +52,19 @@ const continuous = new Detector();
 for(let t=0;t<180;t++){continuous.add(t,burst(20,`LOL ${t}`).map((m,i)=>({...m,author:`v${t}-${i}`})));assert.equal(continuous.tick(t).active,null,"consistently excited chat is ordinary baseline");}
 const sparse = warm(new Detector({sensitivity:"high"})); sparse.add(25,burst(3)); sparse.tick(25); sparse.add(26,burst(2).map(m=>({...m,author:m.author+'new'})));
 assert(sparse.tick(26).active,"more-moments mode recognizes smaller confirmed reactions");
+for (const text of ["clip that!", "CLIP IT", "clippez ça", "сделайте клип", "это в клип!"]) assert(nomination(text),text);
+for (const text of ["don't clip that", "do not clip it", "ne clippez pas ça", "не сделайте клип", "hello"]) assert(!nomination(text),text);
+const requested = warm(new Detector());
+requested.add(25,burst(4,"clip that"));assert.equal(requested.tick(25).active,null);
+requested.add(26,burst(3,"clip it").map(m=>({...m,author:m.author+'new'})));
+assert.equal(requested.tick(26).active.reason,"Viewers asked for a clip");
+assert(requested.active.evidence.signals.includes("viewer_requests"));
+assert.equal(requested.active.start,5,"requests preserve the initial pre-roll");
+const repeatedRequest=warm(new Detector());
+for(let t=25;t<40;t++){repeatedRequest.add(t,burst(50,"clip that").map(m=>({...m,author:"one-viewer"})));assert.equal(repeatedRequest.tick(t).active,null);}
+const regularRequests=new Detector();
+for(let t=0;t<120;t++){regularRequests.add(t,burst(4,`clip that ${t}`).map((m,i)=>({...m,author:`r${t}-${i}`})));assert.equal(regularRequests.tick(t).active,null,"ordinary requests become baseline");}
+const staleRequests=warm(new Detector());staleRequests.add(25,burst(4,"clip that"));
+for(let t=25;t<40;t++)assert.equal(staleRequests.tick(t).active,null,"stale requests cannot confirm themselves");
 console.log("PASS: baseline, busy-chat reaction shift, fresh-message confirmation, small chats, command/link filtering, repeat spam, lead-in, merged bursts, precise quiet tail, cooldown, max duration, manual save, sound opt-in");
+console.log("PASS: multilingual viewer clip requests, negation, distinct viewers, repeated-request baseline and fresh confirmation.");

@@ -5,6 +5,25 @@ set -euo pipefail
 cd "$(dirname "$0")"
 SETUP_ONLY=0; [ "${1:-}" = "--setup-only" ] && SETUP_ONLY=1 && shift
 
+if [ ! -x .venv/bin/python ] && [ "$SETUP_ONLY" = 0 ]; then
+  cat <<'WELCOME'
+
+  Welcome to ClipForge
+  --------------------
+  ClipForge turns long videos into short vertical clips with captions, on this computer.
+
+  This first start sets everything up, usually in 5 to 15 minutes:
+    - FFmpeg, Python and Node.js are installed if they are missing (it may ask for your password)
+    - the app's own packages go into this folder only
+
+  When it is done, ClipForge opens in your browser at http://127.0.0.1:8000
+  Everything runs locally. Your videos never leave this computer.
+  Next time, ./run.sh starts it in a few seconds.
+
+WELCOME
+  if [ -t 0 ]; then read -r -p "  Press Enter to start the setup ... " _ || true; fi
+fi
+
 install_pkg() {
   # install_pkg <brew name> <apt name> <dnf name> <pacman name>
   if command -v brew >/dev/null; then brew install "$1"
@@ -75,7 +94,10 @@ if [ -d .venv/lib ]; then
   done
 fi
 
-if [ "$SETUP_ONLY" = 1 ]; then echo "Setup complete. Start ClipForge with ./run.sh"; exit 0; fi
+if [ "$SETUP_ONLY" = 1 ]; then .venv/bin/python -m app.health || true; echo "Setup complete. Start ClipForge with ./run.sh"; exit 0; fi
+
+# Quick check that everything ClipForge needs is present (a few seconds)
+.venv/bin/python -m app.health || exit 1
 
 echo "ClipForge is starting at http://127.0.0.1:8000  (Ctrl+C to stop)"
 exec .venv/bin/python -m app "$@"

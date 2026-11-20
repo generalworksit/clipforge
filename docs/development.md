@@ -21,6 +21,7 @@ node tests/live_pairing.mjs
 .venv\Scripts\python tests/browser_popup.py
 .venv\Scripts\python tests/browser_monitor.py
 .venv\Scripts\python tests/browser_delete.py
+.venv\Scripts\python tests/browser_gaming.py
 ```
 
 Browser checks use installed Google Chrome. `tests/browser_live.py` exercises real MediaRecorder/FFmpeg using generated input. `tools/smoke_monitor.py` additionally needs cached Kokoro/Whisper models and tests real transcription on generated speech. Synthetic chat and mocked browser APIs do not validate a real platform stream.
@@ -30,3 +31,5 @@ The app binds to loopback. The companion stores a local connection key; YouTube 
 The background monitor currently permits one stream, has a bounded buffer/queue, and requires 8 GiB free space. Windows sleep/forced-restart behavior and long-running multi-stream operation need further validation before unattended production use.
 
 Bundled fonts retain their licenses beside the font files. Model weights are downloaded separately and are not included in the repository.
+
+[Reference project review](reference-review.md) covers the six clipping projects inspected for the gaming editor. `tools/smoke_gaming.py <permitted-local-speech.mp4>` verifies an actual Whisper + FFmpeg export using the cached small model; it writes only under `artifacts/`.

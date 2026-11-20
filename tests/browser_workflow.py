@@ -38,10 +38,10 @@ try:
         assert page.locator("#gallery button").count() == 21
         page.get_by_role("button", name="High energy").click()
         assert page.locator("#gallery [data-value=traffic]").get_attribute("aria-checked") == "true"
-        assert page.locator("#effects [data-value=rgb]").get_attribute("aria-checked") == "true"
         assert page.locator("[name=clips]").input_value() == "4"
         page.get_by_role("button", name="Clean talk").click()
-        assert page.locator("#effects [data-value=none]").get_attribute("aria-checked") == "true"
+        assert page.locator("#gallery [data-value=podcast]").get_attribute("aria-checked") == "true"
+        assert page.locator("#effects").count() == 0, "Light hits step was removed"
         page.get_by_role("searchbox", name="Filter caption styles").fill("ice")
         assert page.locator("#gallery button:visible").count() == 1
         page.get_by_role("searchbox", name="Filter caption styles").fill("")
@@ -72,43 +72,21 @@ try:
         assert 'name="effect"' in payloads[0] and 'name="preset"' in payloads[0]
         assert 'name="preset"\r\n\r\nnone\r\n' in payloads[0]
         page.unroute("**/api/jobs")
-        page.goto(f"http://127.0.0.1:{PORT}/#/discover")
-        page.locator("#discover-search").wait_for()
-        page.route("**/api/discover?*", lambda route: route.fulfill(json={"videos": [{"title": "Browser test source", "channel": "Test channel", "views": None, "duration": 300, "url": "https://www.youtube.com/watch?v=abcdefghijk", "thumbnail": ""}], "source": "Test fixture", "note": "Fixture"}))
-        page.locator("input[name=q]").fill("test topic")
-        page.get_by_role("button", name="Search YouTube").click()
-        page.get_by_role("heading", name="Browser test source").wait_for()
-        page.get_by_role("link", name="Make clips →").click()
-        page.locator("#recipes").wait_for()
-        assert "abcdefghijk" in page.locator("#source input[name=url]").input_value()
-        # Use a real, finished job read-only, if one exists, to exercise queue integration.
-        jobs = page.request.get(f"http://127.0.0.1:{PORT}/api/jobs").json()
-        finished = next((j for j in jobs if j["kind"] == "clips" and j["state"] == "done" and j["clip_count"]), None)
-        if finished:
-            page.goto(f"http://127.0.0.1:{PORT}/#/job/{finished['id']}")
-            page.locator(".queue-clip").first.wait_for()
-            page.locator(".queue-clip").first.click()
-            page.goto(f"http://127.0.0.1:{PORT}/#/planner")
-            page.locator(".plan-row").wait_for()
-            assert page.locator(".plan-row a.primary").first.get_attribute("href").startswith("/files/")
-            page.locator("[data-posted]").first.check()
-            assert "1 / 3 posted" in page.locator("#plan-count").inner_text()
-            page.reload()
-            assert page.locator("[data-posted]").first.is_checked()
-            page.screenshot(path=str(artifacts / "daily-queue-desktop.png"), full_page=True)
-        else:
-            page.goto(f"http://127.0.0.1:{PORT}/#/planner")
-            page.get_by_role("heading", name="Build today’s batch.").wait_for()
+        # Discover and Daily queue were removed from the UI; old links fall back to home.
+        assert page.locator('.nav a[data-nav=discover], .nav a[data-nav=planner]').count() == 0
+        for old in ("discover", "planner"):
+            page.goto(f"http://127.0.0.1:{PORT}/#/{old}")
+            page.locator("#quick").wait_for()
         page.set_viewport_size({"width": 390, "height": 844})
-        for path in ("", "clips", "discover", "planner"):
+        for path in ("", "clips", "gaming", "system"):
             page.goto(f"http://127.0.0.1:{PORT}/#/{path}")
             if path == "clips":
                 page.locator("#recipes button").first.wait_for()
                 page.locator("#source input[name=url]").wait_for()
-            elif path == "planner":
-                page.locator(".plan-row, .workflow-empty, .error-box").first.wait_for()
-            elif path == "discover":
-                page.locator("#discover-search").wait_for()
+            elif path == "gaming":
+                page.locator("#gaming-auto").wait_for()
+            elif path == "system":
+                page.locator("#health-list li").first.wait_for(timeout=60000)
             else:
                 page.locator("#quick").wait_for()
             page.evaluate("window.scrollTo(0, 0)")
@@ -116,7 +94,7 @@ try:
             page.screenshot(path=str(artifacts / f"{path or 'home'}-mobile.png"), full_page=True)
         assert not errors, errors
         browser.close()
-        print("PASS: recipes, 20 styles plus No captions, preview toggling, filtering, request payload, discovery handoff, queue persistence, desktop/mobile layout; no browser errors.")
+        print("PASS: recipes, 20 styles plus No captions, preview toggling, filtering, request payload, Discover/Queue removed, gaming + system pages, desktop/mobile layout; no browser errors.")
 finally:
     server.should_exit = True
     thread.join(timeout=5)

@@ -9,6 +9,11 @@ rem --setup-only installs everything and exits without starting the app (for scr
 set "CF_SETUP_ONLY="
 if /i "%~1"=="--setup-only" set CF_SETUP_ONLY=1
 
+rem First start (no .venv yet): a short explanation window before the setup begins
+if not exist ".venv\Scripts\python.exe" if not defined CF_SETUP_ONLY (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "tools\welcome.ps1" >nul 2>nul
+)
+
 rem ---------------------------------------------------------------- FFmpeg (required)
 call :have ffmpeg ffprobe
 if not errorlevel 1 goto :ffmpeg_ok
@@ -92,6 +97,12 @@ rem ---------------------------------------------------------------- start
 :launch
 if defined CF_SETUP_ONLY goto :setup_done
 call :ollama
+rem Quick check that everything ClipForge needs is present (a few seconds)
+".venv\Scripts\python.exe" -m app.health
+if errorlevel 1 (
+    pause
+    exit /b 1
+)
 echo.
 echo ClipForge is starting at http://127.0.0.1:8000  (close this window to stop it)
 ".venv\Scripts\python.exe" -m app %*
@@ -101,6 +112,8 @@ goto :eof
 
 
 :setup_done
+echo.
+".venv\Scripts\python.exe" -m app.health
 echo.
 echo Setup complete. Start ClipForge with run.bat, it opens http://127.0.0.1:8000
 exit /b 0

@@ -35,6 +35,9 @@ CLIP_STAGES = [
     ("thumbs", "Making thumbnails"),
 ]
 KINDS = {
+    "layout": {"label": "Gaming layout", "queue": "heavy", "stages": [
+        ("download", "Getting the video"), ("render", "Composing webcam and gameplay"),
+        ("transcribe", "Generating subtitles"), ("caption", "Adding captions")]},
     "autoclip": {"label": "Auto clips", "queue": "heavy", "stages": [("extract", "Saving the moment"), ("transcribe", "Generating subtitles"), ("export", "Formatting the clip")]},
     "live": {"label": "Live clips", "queue": "light", "stages": [("render", "Preparing clean MP4")]},
     "clips": {"label": "Clips", "queue": "heavy", "stages": CLIP_STAGES},
@@ -714,7 +717,12 @@ def run_autoclip(job: Job) -> None:
     render(job)
 
 
-RUNNERS = {"clips": run_clips, "download": run_download, "subtitles": run_subtitles, "convert": run_convert,
+def run_layout(job: Job) -> None:
+    from .layouts import render
+    render(job)
+
+
+RUNNERS = {"layout": run_layout, "clips": run_clips, "download": run_download, "subtitles": run_subtitles, "convert": run_convert,
            "voice": run_voice, "live": run_live, "autoclip": run_autoclip}
 
 

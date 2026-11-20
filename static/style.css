@@ -1327,3 +1327,43 @@ input[type=date] { color-scheme: inherit; }
 .btn-s.main, .out .downloads a.main { background: var(--accent-grad); color: var(--on-accent); border-color: transparent; }
 .actionbar { background: var(--nav-bg); backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%);
   border-top-color: var(--glass-border); padding-inline: 16px; margin-inline: -16px; border-radius: 16px 16px 0 0; }
+
+/* ================================================================ light mode for the GPU 2026-11-20 (Claude)
+   The haze behind the panels is smooth, so a live blur on every panel cost a lot and showed little.
+   Panels keep their translucent fill without backdrop-filter, the haze is painted once on a fixed layer,
+   and only the top bar and the action bar keep a small blur. */
+body { background: var(--bg); background-attachment: scroll; transition: none; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--page-bg); transform: translateZ(0); }
+.recipe-panel, .live-setup, .live-card, .source-card, .workflow-empty, .tool, .stage-inner, .lib-pick, .adjust-card,
+.out, .sys, .monitor-form, .monitor-card, .monitor-empty, .error-box, .live-timeline, .clip, .switch, .source-image span, .live-card .pick {
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.recipe-panel, .live-setup, .live-card, .source-card, .tool, .stage-inner, .lib-pick, .adjust-card, .out, .sys,
+.monitor-form, .monitor-card, .live-timeline, .clip { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 6px 18px -12px rgba(0, 0, 0, .5); }
+.switch, .jrow, .theme-toggle { box-shadow: none; }
+.top, .actionbar { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+:root { --nav-bg: rgba(10, 15, 28, .82); }
+:root[data-theme="light"] { --nav-bg: rgba(238, 243, 251, .85); }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --nav-bg: rgba(238, 243, 251, .85); } }
+:root[data-theme="light"] .recipe-panel, :root[data-theme="light"] .tool, :root[data-theme="light"] .stage-inner, :root[data-theme="light"] .out,
+:root[data-theme="light"] .clip, :root[data-theme="light"] .sys, :root[data-theme="light"] .adjust-card { box-shadow: 0 4px 14px -10px rgba(50, 80, 150, .35); }
+.act-dot { animation-duration: 2.4s; }
+
+/* health check (System page) + status dot on the System nav link */
+.health { margin-bottom: 16px; padding: 20px; border: 1px solid var(--glass-border); border-radius: 20px; background: var(--s1); display: grid; gap: 16px; }
+.health-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.health-head h2 { margin: 4px 0 0; font: 500 22px var(--body); }
+.health-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px 24px; }
+.health-list li { display: grid; grid-template-columns: 8px 120px minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.health-list b { font-weight: 500; }
+.health-list span { color: var(--ink-2); }
+.health-list small { display: block; margin-top: 2px; color: var(--muted); }
+.health-dot, .nav a[data-health]::before { width: 8px; height: 8px; border-radius: 50%; background: var(--green); align-self: center; }
+[data-status="warn"] > .health-dot { background: #e0a43a; }
+[data-status="fail"] > .health-dot { background: var(--red); }
+.health[data-status="fail"] { border-color: color-mix(in srgb, var(--red) 45%, transparent); }
+.nav a[data-health="warn"]::before, .nav a[data-health="fail"]::before { content: ""; display: inline-block; margin-right: 6px; vertical-align: middle; width: 6px; height: 6px; }
+.nav a[data-health="warn"]::before { background: #e0a43a; }
+.nav a[data-health="fail"]::before { background: var(--red); }
+.health-list li { align-items: start; }
+.health-list .health-dot { align-self: start; margin-top: 6px; }

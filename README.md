@@ -36,14 +36,14 @@ Windows 10/11 · Linux · Python · FFmpeg · Whisper · runs offline after setu
 |---|---|
 | **Clip maker** | Finds the best moments in a long video, cuts them to 9:16, follows the speaker and adds styled word-by-word captions. Optional thumbnail per clip |
 | **Live clips** | Records YouTube and Twitch streams in Chrome and saves a clip when chat reacts, with the setup before and the ending after |
+| **Gaming layout** | **Auto detect** finds the webcam in a gameplay recording for you, or draw webcam/game regions yourself, preview a vertical stack or camera overlay, save layouts, trim, and export with captions or without |
 | **Auto monitor** | Same idea without a browser tab, for YouTube livestreams (experimental) |
-| **Discover** | Searches YouTube by topic and compares view counts to find a source worth clipping |
-| **Daily queue** | Plans 2 to 4 posts a day and tracks what you already posted |
 | **Downloader** | MP4 or MP3 from YouTube, TikTok, Instagram, X, Reddit, Twitch and 1000+ other sites, many links at once |
 | **Subtitles** | SRT, VTT or text with word timing, translation to English, or captions burned into the video |
 | **Converter** | Make vertical (blur or crop), compress to a target size for Discord or WhatsApp, trim, extract MP3, make GIFs |
 | **AI voice** | Local text-to-speech for intros and voiceovers |
 | **Library** | Everything you made, with preview, save, select and bulk delete |
+| **System** | A health check of FFmpeg, Python, packages, disk, GPU, downloader and local AI, with the fix for anything wrong |
 
 Light and dark mode follow your system, or switch with the button in the top bar. Everything runs on `127.0.0.1`. Your videos, keys and settings never leave the PC, and nothing is posted for you.
 
@@ -91,7 +91,7 @@ git clone https://github.com/generalworksit/clipforge.git "$HOME\Desktop\clipfor
    ```
 2. Double-click **`run.bat`**.
 
-That's it. The first run takes 5 to 15 minutes depending on your connection, later runs start in a few seconds. The browser opens **http://127.0.0.1:8000** by itself.
+That's it. A short window explains what happens, then the first run takes 5 to 15 minutes depending on your connection, later runs start in a few seconds. The browser opens **http://127.0.0.1:8000** by itself.
 
 What the first run does for you:
 
@@ -104,6 +104,8 @@ What the first run does for you:
 | Node.js LTS | installed with `winget` if missing | Auto monitor only |
 | Ollama + qwen3:8b | **asked once**, about 6 GB, skipped after 30 s | smarter moment picking (optional) |
 | Whisper and voice models | downloaded the first time a tool needs them | subtitles, clips, AI voice |
+
+Before every start the launcher runs a quick system check (a few seconds) and prints anything that needs attention, with the fix. The same check is on the **System** page.
 
 > [!NOTE]
 > Windows may show a permission prompt while installing Python, FFmpeg or Node.js. Accept it and the launcher continues on its own.

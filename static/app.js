@@ -4,8 +4,8 @@ const view = document.getElementById("view");
 let pollTimer = null;
 let options = null;
 
-const KIND_LABEL = { autoclip: "Auto clips", live: "Live clips", clips: "Clips", download: "Download", subtitles: "Subtitles", convert: "Convert", voice: "AI voice" };
-const KIND_ROUTE = { autoclip: "monitor", live: "live", clips: "clips", download: "download", subtitles: "subtitles", convert: "convert", voice: "voice" };
+const KIND_LABEL = { layout: "Gaming layout", autoclip: "Auto clips", live: "Live clips", clips: "Clips", download: "Download", subtitles: "Subtitles", convert: "Convert", voice: "AI voice" };
+const KIND_ROUTE = { layout: "gaming", autoclip: "monitor", live: "live", clips: "clips", download: "download", subtitles: "subtitles", convert: "convert", voice: "voice" };
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const cap1 = (s) => s ? s[0].toUpperCase() + s.slice(1) : "";
@@ -631,16 +631,10 @@ async function renderClips(params) {
   }
   aiBox.addEventListener("change", update);
   autoBtn.addEventListener("click", () => { state.auto = !state.auto; update(); });
-  const syncEffect = radioGroup(document.getElementById("effects"), Object.entries(opts.effects).map(([id, e]) => ({ id, ...e })), state.effect,
-    (id) => { state.effect = id; syncEffect(id); update(); }, (e) => `<span class="effect-swatch effect-${e.id}"></span><b>${esc(e.label)}</b><small>${esc(e.hint)}</small>`);
-  document.getElementById("effect-intensity").addEventListener("input", (ev) => {
-    state.intensity = Number(ev.target.value);
-    document.getElementById("intensity-value").value = `${Math.round(state.intensity * 100)}%`; update();
-  });
   const recipes = [
-    { id: "clean", label: "Clean talk", hint: "3 clips · podcast captions · no light hits", preset: "podcast", effect: "none", count: 3, length: "normal", framing: "face", videoType: "talk" },
-    { id: "energy", label: "High energy", hint: "4 clips · red / green captions · colour hits", preset: "traffic", effect: "rgb", count: 4, length: "short", framing: "crop", videoType: "viral" },
-    { id: "story", label: "Story cut", hint: "2 clips · editorial captions · white light", preset: "editorial", effect: "white", count: 2, length: "long", framing: "blur", videoType: "talk" },
+    { id: "clean", label: "Clean talk", hint: "3 clips · podcast captions · follows the speaker", preset: "podcast", count: 3, length: "normal", framing: "face", videoType: "talk" },
+    { id: "energy", label: "High energy", hint: "4 clips · red / green captions · short cuts", preset: "traffic", count: 4, length: "short", framing: "crop", videoType: "viral" },
+    { id: "story", label: "Story cut", hint: "2 clips · editorial captions · blurred fill", preset: "editorial", count: 2, length: "long", framing: "blur", videoType: "talk" },
   ];
   const recipeBox = document.getElementById("recipes");
   recipeBox.innerHTML = recipes.map((r) => `<button type="button" class="recipe" data-recipe="${r.id}"><strong>${r.label}</strong><small>${r.hint}</small></button>`).join("");
@@ -650,7 +644,6 @@ async function renderClips(params) {
     document.querySelector(`#gallery [data-value="${r.preset}"]`).click();
     document.querySelector(`#framings [data-value="${r.framing}"]`).click();
     document.querySelector(`#lengths [data-value="${r.length}"]`).click();
-    document.querySelector(`#effects [data-value="${r.effect}"]`).click();
     clipsInput.value = r.count; state.auto = false;
     recipeBox.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
     document.getElementById("recipe-note").textContent = `${r.label} applied. Settings below are ready to adjust.`;
@@ -820,7 +813,7 @@ function useInLinks(jobId, file, compact) {
   const q = `?from=${jobId}&file=${encodeURIComponent(file)}`;
   return compact
     ? `<a class="btn-s" href="#/clips${q}">Clips</a><a class="btn-s hide-sm" href="#/voice${q}">AI voice</a><a class="btn-s hide-sm" href="#/subtitles${q}">Subtitles</a><a class="btn-s hide-sm" href="#/convert${q}">Convert</a>`
-    : `<a href="#/clips${q}">Make clips</a><a href="#/voice${q}">Add AI voice</a><a href="#/subtitles${q}">Subtitles</a><a href="#/convert${q}">Convert</a>`;
+    : `<a href="#/gaming${q}">Gaming layout</a><a href="#/clips${q}">Make clips</a><a href="#/voice${q}">Add AI voice</a><a href="#/subtitles${q}">Subtitles</a><a href="#/convert${q}">Convert</a>`;
 }
 
 /* ---------------------------------------------------------------- AI voice */
@@ -1143,7 +1136,7 @@ async function renderJob(id) {
     view.style.setProperty("--k", `var(--k-${kind})`);
     const crumb = document.getElementById("crumb");
     crumb.href = `#/${KIND_ROUTE[kind]}`;
-    crumb.textContent = { live: "Live clips", clips: "Clip maker", download: "Downloader", subtitles: "Subtitles", convert: "Converter", voice: "AI voice" }[kind];
+    crumb.textContent = kind === "clips" ? "Clip maker" : kind === "download" ? "Downloader" : KIND_LABEL[kind] || "Library";
     document.getElementById("job-title").textContent = job.title || "Untitled";
 
     const stateText = { queued: job.queue_position ? `Waiting, ${job.queue_position} in line` : "Waiting", running: "Working", done: "Done", error: "Failed" }[job.state];
@@ -1233,7 +1226,7 @@ async function renderJob(id) {
       const zip = document.getElementById("zip");
       zip.href = `/api/jobs/${job.id}/zip?v=${encodeURIComponent(job.finished)}`;
       zip.hidden = files < 2;
-      ({ autoclip: renderFileResults, live: renderFileResults, clips: renderClipResults, download: renderFileResults, convert: renderFileResults, subtitles: renderSubtitleResults, voice: renderVoiceResults })[kind](job);
+      ({ layout: renderFileResults, autoclip: renderFileResults, live: renderFileResults, clips: renderClipResults, download: renderFileResults, convert: renderFileResults, subtitles: renderSubtitleResults, voice: renderVoiceResults })[kind](job);
       document.getElementById("results").hidden = false;
     }
     if (job.state === "queued" || job.state === "running") pollTimer = setTimeout(tick, 1500);
@@ -1260,6 +1253,7 @@ function metric(label, value, max, measured) {
 
 function mediaTag(job, o, attrs = "") {
   const url = fileUrl(job.id, o.file, false, job.finished);
+  if (o.media === "text") return `<span class="muted">${esc(o.file)}</span>`;
   if (o.media === "audio") return `<audio src="${url}" controls preload="metadata" ${attrs}></audio>`;
   if (o.media === "image") return `<img class="out-img" src="${url}" alt="${esc(o.label)}">`;
   const vertical = o.height > o.width;
@@ -1394,7 +1388,6 @@ async function renderClipResults(job) {
         </div>
         <div class="downloads">
           ${c.files.voiced ? `<a class="main" href="${f(c.files.voiced, true)}">Save with AI hook</a>` : ""}
-          <button type="button" class="queue-clip ghost" data-index="${c.index}">Add to daily queue</button>
           <a class="${c.files.voiced ? "" : "main"}" href="${f(c.files.captioned, true)}">${c.files.voiced ? (o.preset === "none" ? "Without voice hook" : "Captioned only") : "Save MP4"}</a>
           <a href="${f(c.files.clean, true)}">No captions</a>
           <a href="${f(c.files.srt, true)}">SRT</a>
@@ -1431,21 +1424,6 @@ async function renderClipResults(job) {
     </article>`;
   }).join("");
   copyButtons(body);
-  body.querySelectorAll(".queue-clip").forEach((btn) => btn.addEventListener("click", () => {
-    const c = job.clips.find((item) => item.index === Number(btn.dataset.index));
-    try {
-      const queue = readQueue(), key = `${job.id}:${c.index}`;
-      if (!queue.some((item) => item.key === key)) queue.push({ key, job: job.id, index: c.index, date: localDay(), title: c.title, posted: false });
-      writeQueue(queue); flash(btn, "Added to today");
-    } catch (e) { flash(btn, "Could not save queue"); }
-  }));
-  adjust.querySelector("#effects-edit")?.remove();
-  adjust.insertAdjacentHTML("beforeend", `<form class="adjust-card" id="effects-edit"><label class="field"><span class="label">Light hits</span><select name="effect" aria-label="Light effect">${Object.entries(opts.effects).map(([id, e]) => `<option value="${id}" ${id === (o.effect || "none") ? "selected" : ""}>${esc(e.label)}</option>`).join("")}</select></label><label class="intensity-field">Intensity <input type="range" name="effect_intensity" aria-label="Light intensity" min="0.1" max="1" step="0.1" value="${o.effect_intensity || 0.5}"></label><button class="ghost" type="submit">Apply light hits to all</button><p class="hint-s" role="status"></p></form>`);
-  document.getElementById("effects-edit").addEventListener("submit", async (ev) => {
-    ev.preventDefault(); const button = ev.target.querySelector("button"); button.disabled = true;
-    try { await api(`/api/jobs/${job.id}/effects`, { method: "POST", body: new FormData(ev.target) }); renderJob(job.id); }
-    catch (e) { ev.target.querySelector("[role=status]").textContent = e.message; button.disabled = false; }
-  });
   body.querySelectorAll("form.thumb-edit").forEach((form) => wireThumb(job, form));
   const vstate = { mode: o.voice ? o.voice_mode : "", voice: o.voice || opts.voices[0].id };
   voiceControls(document.getElementById("voice-edit"), opts, vstate);
@@ -1588,6 +1566,10 @@ async function renderSystem() {
       `${wk.running ? `<a href="#/job/${wk.running}">busy</a>` : "idle"}${wk.waiting ? `, ${wk.waiting} waiting` : ""}`])),
   ].join("");
 
+  grid.insertAdjacentHTML("beforebegin", `<section class="health" id="health" aria-live="polite"><div class="health-head"><div><span class="eyebrow">Health check</span><h2 id="health-title">Checking…</h2></div><button class="ghost" id="health-run" type="button">Check again</button></div><ul class="health-list" id="health-list"></ul></section>`);
+  document.getElementById("health-run").addEventListener("click", runHealth);
+  runHealth();
+
   const upd = document.getElementById("update-dl");
   upd.addEventListener("click", async () => {
     upd.disabled = true; upd.textContent = "Updating… (up to a minute)";
@@ -1598,71 +1580,26 @@ async function renderSystem() {
   });
 }
 
-/* ---------------------------------------------------------------- daily workflow */
-
-const localDay = () => {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-};
-function readQueue() {
-  const queue = JSON.parse(localStorage.getItem("clipforge.daily.v1") || "[]");
-  return Array.isArray(queue) ? queue.filter((x) => x && typeof x.key === "string" && typeof x.date === "string") : [];
-}
-function writeQueue(queue) { localStorage.setItem("clipforge.daily.v1", JSON.stringify(queue)); }
-
-async function renderDiscover(params) {
-  setNav("discover"); clearTimeout(pollTimer);
-  view.innerHTML = `<section class="discover-page"><header class="page-head"><p class="eyebrow">01 / Source discovery</p><h1>Find your next cut</h1><p class="lede">Search a topic, compare public view counts, then send a source to Clip maker.</p></header>
-    <form class="discover-search" id="discover-search"><label class="field grow"><span class="label">Topic or creator</span><input name="q" type="search" minlength="2" maxlength="160" required placeholder="e.g. podcast surprising stories" value="${esc(params.q || "")}"></label><label class="field"><span class="label">Sort these results</span><select name="sort"><option value="relevance">Relevance</option><option value="views">Most viewed</option></select></label><button class="primary">Search YouTube</button></form>
-    <p class="hint-s">Public YouTube search · no account required · clip sources you own or have permission to reuse.</p>
-    <div id="discovery-results" aria-live="polite"><div class="workflow-empty"><span class="eyebrow">Start with a topic</span><h2>Look for a story worth finishing.</h2><p>Try an interview, a creator, or a specific question. View counts are context; check the actual moment before making a batch.</p><a href="#/clips">Already have a video? Paste a link →</a></div></div>
-    <aside class="connection-note"><strong>Research with vidIQ</strong><p>vidIQ research and private channel analytics are available through the assistant’s connected vidIQ plugin. This local app uses public search and does not inherit that connection.</p><a href="https://app.vidiq.com" target="_blank" rel="noopener noreferrer">Open vidIQ ↗</a></aside></section>`;
-  const form = document.getElementById("discover-search"), box = document.getElementById("discovery-results");
-  form.addEventListener("submit", async (ev) => {
-    ev.preventDefault(); const button = form.querySelector("button"); button.disabled = true;
-    box.innerHTML = `<p class="search-loading">Searching YouTube…</p>`;
-    try {
-      const data = await api(`/api/discover?${new URLSearchParams(new FormData(form))}`);
-      if (!form.isConnected) return;
-      box.innerHTML = `<div class="section-head"><h2>${data.videos.length} sources</h2><span class="muted">${esc(data.source)}</span></div><p class="hint-s">${esc(data.note)}</p><div class="discovery-grid">${data.videos.map((v) => `<article class="source-card"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer" class="source-image"><img src="${esc(v.thumbnail)}" alt="" loading="lazy"><span>${v.duration == null ? "Length unknown" : fmtTime(v.duration)}</span></a><div class="source-content"><p class="hint-s">${esc(v.channel)} · ${v.views == null ? "Views unavailable" : `${new Intl.NumberFormat().format(v.views)} views`}</p><h3>${esc(v.title)}</h3><a class="primary small" href="#/clips?${new URLSearchParams({ url: v.url })}">Make clips →</a></div></article>`).join("")}</div>${!data.videos.length ? '<p class="empty">No videos found. Try a broader topic or paste a link in Clip maker.</p>' : ""}`;
-    } catch (e) { if (form.isConnected) box.innerHTML = `<div class="error-box" role="alert">${esc(e.message)}</div>`; }
-    finally { button.disabled = false; }
-  });
-}
-
-async function renderPlanner() {
-  setNav("planner"); clearTimeout(pollTimer);
-  view.innerHTML = `<section><header class="page-head"><p class="eyebrow">03 / Daily queue</p><h1>A few good clips, every day</h1><p class="lede">Prepare 2–4 posts, download them, then mark each one as posted. This queue is saved in this browser.</p></header><div class="planner-toolbar"><label class="field"><span class="label">Day</span><input type="date" id="plan-date" value="${localDay()}"></label><label class="field"><span class="label">Daily goal</span><select id="plan-goal"><option value="2">2 posts</option><option value="3" selected>3 posts</option><option value="4">4 posts</option></select></label><span id="plan-count" role="status"></span><a class="ghost" href="#/library?kind=clips">Find finished clips →</a></div><div id="plan-results" aria-live="polite"></div></section>`;
-  const date = document.getElementById("plan-date"), goal = document.getElementById("plan-goal"), box = document.getElementById("plan-results");
-  let all;
+const HEALTH_TITLE = { ok: "Everything works", warn: "Working, with notes", fail: "Something needs fixing" };
+async function runHealth() {
+  const box = document.getElementById("health"), list = document.getElementById("health-list"), btn = document.getElementById("health-run");
+  if (!box) return;
+  btn.disabled = true; btn.textContent = "Checking…";
   try {
-    const saved = readQueue();
-    const ids = [...new Set(saved.map((item) => item.job))].filter((id) => /^[a-f0-9]{12}$/.test(id));
-    const results = await Promise.allSettled(ids.map((id) => api(`/api/jobs/${id}`)));
-    all = results.filter((result) => result.status === "fulfilled").map((result) => result.value);
-  } catch (e) { box.innerHTML = `<p class="error-box">${esc(e.message)}</p>`; return; }
-  function draw() {
-    let queue;
-    try { queue = readQueue(); } catch { box.innerHTML = `<p class="error-box">The saved queue could not be read. Check browser storage permissions.</p>`; return; }
-    const items = queue.filter((item) => item.date === date.value);
-    document.getElementById("plan-count").textContent = `${items.filter((i) => i.posted).length} / ${goal.value} posted · ${items.length} prepared`;
-    box.innerHTML = items.length ? items.map((item) => {
-      const job = all.find((j) => j.id === item.job), clip = job?.clips?.find((c) => c.index === item.index);
-      const file = clip?.files?.voiced || clip?.files?.captioned;
-      return `<article class="plan-row"><label class="check"><input type="checkbox" data-posted="${esc(item.key)}" ${item.posted ? "checked" : ""}><span>Posted</span></label><div class="grow"><h3>${esc(item.title)}</h3><a href="#/job/${encodeURIComponent(item.job)}">Review clip →</a></div>${file && job.state === "done" ? `<a class="primary small" href="${fileUrl(job.id, file, true, job.finished)}">Download MP4</a>` : '<span class="muted">File unavailable</span>'}<label class="field"><span class="label">Move to day</span><input type="date" data-move="${esc(item.key)}" value="${esc(item.date)}"></label><button class="ghost" data-remove="${esc(item.key)}">Remove</button></article>`;
-    }).join("") : `<div class="workflow-empty"><span class="eyebrow">Nothing planned yet</span><h2>Build today’s batch.</h2><p>Open a finished clip job and choose “Add to daily queue” beside each clip you want to post.</p><a class="primary small" href="#/clips">Make a batch →</a></div>`;
-    const save = (change) => {
-      try { const latest = readQueue(); writeQueue(change(latest)); draw(); }
-      catch { box.insertAdjacentHTML("afterbegin", '<p class="error-box" role="alert">Could not save. Check browser storage permissions.</p>'); }
-    };
-    box.querySelectorAll("[data-posted]").forEach((input) => input.addEventListener("change", () => save((q) => q.map((x) => x.key === input.dataset.posted ? { ...x, posted: input.checked } : x))));
-    box.querySelectorAll("[data-move]").forEach((input) => input.addEventListener("change", () => {
-      if (input.value) save((q) => q.map((x) => x.key === input.dataset.move ? { ...x, date: input.value } : x));
-    }));
-    box.querySelectorAll("[data-remove]").forEach((button) => button.addEventListener("click", () => save((q) => q.filter((x) => x.key !== button.dataset.remove))));
-  }
-  date.addEventListener("change", draw); goal.addEventListener("change", draw); draw();
+    const r = await api("/api/system/check");
+    if (!box.isConnected) return;
+    box.dataset.status = r.status;
+    document.getElementById("health-title").textContent = HEALTH_TITLE[r.status];
+    list.innerHTML = r.checks.map((c) => `<li data-status="${esc(c.status)}"><span class="health-dot" aria-label="${esc(c.status)}"></span><b>${esc(c.label)}</b><span>${esc(c.detail)}${c.status !== "ok" && c.fix ? `<small>${esc(c.fix)}</small>` : ""}</span></li>`).join("");
+    healthDot(r.status);
+  } catch (e) { list.innerHTML = `<li data-status="fail"><span class="health-dot"></span><b>Check failed</b><span>${esc(e.message)}</span></li>`; }
+  finally { btn.disabled = false; btn.textContent = "Check again"; }
 }
+function healthDot(status) {
+  const link = document.querySelector('.nav a[data-nav="system"]');
+  if (link) link.dataset.health = status;
+}
+api("/api/system/check").then((r) => healthDot(r.status)).catch(() => {});
 
 /* ---------------------------------------------------------------- router */
 
@@ -1716,6 +1653,11 @@ async function renderLive() {
         const grid = box.querySelector(".live-grid");
         if (grid) {
           grid._sel = selected;
+          for (const card of grid.querySelectorAll(".live-card")) {
+            const job = items.find(j => j.id === card.dataset.id);
+            const file = job?.state === "done" && job.outputs?.find(f => f.media === "video");
+            if (file) card.querySelector(".live-actions").insertAdjacentHTML("afterbegin", `<a class="ghost small" href="#/gaming?from=${job.id}&file=${encodeURIComponent(file.file)}">Gaming layout</a>`);
+          }
           bulkBar(grid, { item: ".live-card", noun: "clip", onDeleted: () => { previous = ""; refresh(); } });
         }
       }
@@ -1741,7 +1683,7 @@ async function renderLive() {
 }
 const LIVE_BUSY = new Set(["active", "running", "receiving", "queued"]);
 
-const ROUTES = { "": renderHome, monitor: renderMonitor, live: renderLive, discover: renderDiscover, planner: renderPlanner, clips: renderClips, download: renderDownload, subtitles: renderSubtitles,
+const ROUTES = { "": renderHome, gaming: renderGaming, monitor: renderMonitor, live: renderLive, clips: renderClips, download: renderDownload, subtitles: renderSubtitles,
   convert: renderConvert, voice: renderVoice, library: renderLibrary, history: renderLibrary, system: renderSystem };
 
 let routeSeq = 0;

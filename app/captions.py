@@ -140,7 +140,7 @@ def _spoken(word: str, p: dict, colour: str, k: float = 1.0) -> str:
 
 
 def build_ass(words: list[dict], clip_duration: float, preset: str, position: str,
-              size: tuple[int, int] | None = None) -> str:
+              size: tuple[int, int] | None = None, anchor_y: float | None = None) -> str:
     """Presets are tuned for a 1080x1920 canvas. For another size (a whole landscape video in the
     Subtitles tool) everything is scaled to the frame height and the margins are recomputed."""
     p = PRESETS[preset]
@@ -218,6 +218,14 @@ def build_ass(words: list[dict], clip_duration: float, preset: str, position: st
                 glow = " ".join(f"{{\\3a&H30&}}{t}{{\\3a&HFF&}}" if j == wi else t for j, t in enumerate(texts))
                 lines.append(f"Dialogue: 0,{_ts(t0)},{_ts(t1)},Glow,,0,0,0,,"
                              f"{{\\1a&HFF&\\3a&HFF&\\blur{round(10 * k, 1)}}}{glow}")
+    if anchor_y is not None:
+        if not 0 <= anchor_y <= h:
+            raise ValueError("Caption anchor must be inside the output frame.")
+        for i, line in enumerate(lines):
+            if line.startswith("Dialogue:"):
+                fields = line.split(",", 9)
+                fields[9] = f"{{\\an5\\pos({w//2},{round(anchor_y)})}}" + fields[9]
+                lines[i] = ",".join(fields)
     return "\n".join(lines) + "\n"
 
 
