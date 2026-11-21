@@ -41,6 +41,7 @@ async function renderMonitor() {
       <div class="section-head"><h2>Captured moments</h2><a href="#/library?kind=autoclip">Open library →</a></div><div id="monitor-clips"></div>
     </div></div></section>`;
   const form = document.getElementById("monitor-form"), streams = document.getElementById("monitor-streams"), error = document.getElementById("monitor-error");
+  form.elements.aspect.querySelector('[value="vertical"]').defaultSelected=true;
   let state, editing = null, busy = false, previous = "", streamsVersion = "";
   const showFailure = e => {if (error.isConnected) {error.textContent=e.message;error.hidden=false;}};
   const post = (path, body, method="POST") => api(path,{method,headers:{"Content-Type":"application/json"},...(body===undefined?{}:{body:JSON.stringify(body)})});
@@ -92,7 +93,7 @@ async function renderMonitor() {
       document.getElementById("monitor-key-status").textContent=data.key_configured?"Key saved":"Setup needed";
       const reserve=data.settings?.reserve_gb||8,storage=document.getElementById("monitor-storage");storage.hidden=data.free_bytes>=reserve*1024**3;storage.textContent=`Recording needs ${reserve} GiB free on the ClipForge drive. Change the reserve in Recording limits or free some storage.`;
       if(!data.key_configured)document.getElementById("monitor-key-setup").open=true;
-      const presets=document.getElementById("monitor-presets");if(presets.options.length===1){presets.innerHTML=data.presets.map(p=>`<option value="${esc(p.id)}">${esc(p.label)}</option>`).join("");}
+      const presets=document.getElementById("monitor-presets");if(presets.options.length===1){presets.innerHTML=data.presets.map(p=>`<option value="${esc(p.id)}" ${p.id==="bold"?"selected":""}>${esc(p.label)}</option>`).join("");}
       document.getElementById("monitor-count").textContent=`${data.monitors.filter(c=>c.runtime?.state==="recording").length}/${data.max_active} recording · ${data.monitors.filter(c=>c.enabled).length} enabled`;
       const version=JSON.stringify(data.monitors);
       if(version!==streamsVersion){streamsVersion=version;streams.innerHTML=data.monitors.length?data.monitors.map(c=>{

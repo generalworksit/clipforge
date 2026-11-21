@@ -18,13 +18,18 @@ with sync_playwright() as p:
       window.__tab = {ok:true,supported:false,reason:'Open a Twitch or YouTube live stream'};
       window.chrome = {storage:{local:{async get(){return __storage}, async set(v){Object.assign(__storage,v)}}},
         commands:{async getAll(){return [{name:'save-moment',shortcut:'Alt+Shift+C'}]}},
-        runtime:{async sendMessage(m){__commands.push(m.type);
+        runtime:{getManifest:()=>({version:'1.4.1'}),async sendMessage(m){__commands.push(m.type);
+          if(m.type==='HELLO')return location.search.includes('legacy')?{ok:false,error:'Unknown command.'}:{ok:true,version:'1.4.1'};
           if(m.type==='PAIR'){
             if(__pairFails)return {ok:false,error:'Start ClipForge, then click Connect app again.'};
             __storage.token='test-only'; return {ok:true};
           }
           if(m.type==='STATUS')return __status;
           if(m.type==='TAB')return __tab;
+          if(m.type==='PAIR_KEY'){
+            if(m.token!=='v'.repeat(43))return {ok:false,error:'Connection key was not accepted. Click Connect app again.'};
+            __storage.token=m.token;__storage.port=m.port;return {ok:true};
+          }
           if(m.type==='START')__status={...__status,recording:true,warmed:false,warmupRemaining:18,buffered:2};
           if(m.type==='MARK')__status={...__status,active:true,reason:'Manual highlight',tailRemaining:12};
           if(m.type==='STOP')__status={...__status,recording:false,active:false};
@@ -81,6 +86,19 @@ with sync_playwright() as p:
     page.locator("#manual > summary").click()
     page.locator("#port").fill("80"); page.locator("#save").click()
     assert "between 1024" in page.locator("#error").inner_text()
+    page.locator("#port").fill("8000");page.locator("#token").fill("wrong-key");page.locator("#save").click()
+    expect(page.locator("#error")).to_contain_text("not accepted")
+    assert page.evaluate("__storage.token==='test-only'")
+    page.locator("#token").fill("v"*43);page.locator("#save").click()
+    expect(page.locator("#notice")).to_contain_text("Key verified")
+    expect(page.locator("#conn-text")).to_have_text("Connected")
+    page.evaluate("()=>{chrome.runtime.sendMessage=async m=>m.type==='STATUS'?__status:{ok:false,error:'Unknown command.'}}")
+    page.locator("#check-connection").click()
+    expect(page.locator("#error")).to_contain_text("out of sync")
+    page.goto((ROOT / "extension/popup.html").as_uri()+"?legacy=1")
+    expect(page.locator("#error")).to_contain_text("out of sync")
+    expect(page.locator("#reload-extension")).to_be_visible()
+    expect(page.locator("#pair")).to_be_disabled()
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     assert page.evaluate("getComputedStyle(document.documentElement).minWidth === '380px'")
     assert not errors, errors

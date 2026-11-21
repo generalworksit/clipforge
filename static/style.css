@@ -1373,3 +1373,10 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-even
 #publish-limit button { margin-top:8px; }
 #publish-client input[type=file] { max-width:100%; font:inherit; }
 #caption-timing-form { display:grid; gap:12px; margin:16px 0; max-width:580px; }
+.live-tools { margin: 28px 0; border-block: 1px solid var(--line); padding: 24px 0; }
+.live-export-options { display: grid; grid-template-columns: 1fr 1.4fr 80px auto; gap: 16px; align-items: end; margin: 20px 0 12px; }
+.live-export-options .field { display: grid; gap: 8px; min-width: 0; }
+.live-export-options select,.live-export-options input { width: 100%; min-width: 0; }
+.live-shorts-job { margin: 16px 0; padding: 16px; background: var(--s1); border-radius: 12px; }
+.live-shorts-job video { max-height: 420px; }
+@media(max-width:720px) { .live-export-options { grid-template-columns: 1fr 1fr; }.live-tools .section-head { flex-wrap: wrap; } }

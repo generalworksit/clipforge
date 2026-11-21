@@ -1,7 +1,37 @@
 /* Gaming layout editor. The backend supplies the exact geometry used by FFmpeg. */
+function gamingGuide() {
+  return `<details class="gaming-guide" open><summary>See how it works <span>8-second guide</span></summary>
+    <div class="gaming-guide-body"><svg viewBox="0 0 720 224" role="img" aria-label="Draw around the webcam, frame the gameplay, and combine both in a vertical Short.">
+    <rect class="guide-screen" x="16" y="24" width="320" height="180" rx="8"/>
+    <path class="guide-world" d="M20 154L100 72 146 112 220 56 332 154V200H20Z"/>
+    <path class="guide-road" d="M168 124H206L256 200H108Z"/>
+    <rect class="guide-car" x="171" y="151" width="35" height="20" rx="6"/>
+    <g transform="translate(34 132)"><rect class="guide-camera" width="74" height="56" rx="3"/><circle class="guide-face" cx="37" cy="21" r="12"/><path class="guide-face" d="M13 56Q14 33 37 33T61 56Z"/></g>
+    <rect class="guide-camera-box" x="30" y="128" width="82" height="64" rx="3"/>
+    <rect class="guide-game-box" x="124" y="42" width="198" height="140" rx="3"/>
+    <path class="guide-arrow" d="M380 112H494m-14-14 14 14-14 14"/>
+    <rect class="guide-screen" x="551" y="5" width="123" height="214" rx="8"/>
+    <g class="guide-camera-move"><rect class="guide-camera" width="74" height="56"/><circle class="guide-face" cx="37" cy="21" r="12"/><path class="guide-face" d="M13 56Q14 33 37 33T61 56Z"/></g>
+    <g class="guide-game-move"><rect class="guide-game" width="198" height="140"/><path class="guide-world" d="M0 70L40 20 90 60 130 0 198 72V140H0Z"/><path class="guide-road" d="M83 61H105L148 140H40Z"/><rect class="guide-car" x="83" y="89" width="27" height="18" rx="4"/></g>
+    <g class="guide-caption"><rect x="565" y="131" width="95" height="19" rx="4"/><text x="612" y="144" text-anchor="middle">WHAT A MOMENT</text></g>
+    </svg><div class="gaming-guide-steps"><p><b>1. Webcam</b>Drag around the facecam.</p><p><b>2. Gameplay</b>Select Gameplay and frame the action.</p><p><b>3. Export</b>Preview the Short, then add captions.</p></div><button class="btn-s" id="gaming-guide-play" type="button">Pause guide</button></div></details>`;
+}
+function mountGamingGuide(root) {
+  const guide=root.querySelector(".gaming-guide"),button=root.querySelector("#gaming-guide-play");
+  const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let ended=reduced,paused=false;
+  if(reduced){button.hidden=true;return;}
+  guide.querySelector(".guide-game-move").addEventListener("animationend",()=>{ended=true;button.textContent="Replay guide";});
+  button.onclick=()=>{
+    if(ended){guide.classList.add("guide-reset");void guide.offsetWidth;guide.classList.remove("guide-reset");ended=false;paused=false;}
+    else paused=!paused;
+    guide.classList.toggle("guide-paused",paused);button.textContent=paused?"Continue guide":"Pause guide";
+  };
+}
 async function renderGaming(params = {}) {
   setNav("gaming"); clearTimeout(pollTimer);
   view.innerHTML = `<section class="gaming-page"><header class="page-head"><p class="eyebrow">Gaming / reaction</p><h1>Your webcam. Your gameplay.</h1><p class="lede">Draw the two regions, check the vertical preview, export.</p></header>
+    ${gamingGuide()}
     <div class="gaming-source"><label class="field">Local video<input id="gaming-upload" type="file" accept="video/*"></label>
     <label class="field">From your library<select id="gaming-library"><option value="">Choose a saved video…</option></select></label>
     <label class="field">Video URL<div class="gaming-inline"><input id="gaming-url" type="url" placeholder="YouTube, Twitch or Kick recording"><button id="gaming-import" class="ghost">Import</button></div></label></div>
@@ -29,6 +59,7 @@ async function renderGaming(params = {}) {
       </div><div class="gaming-panel gaming-presets"><label class="field">Saved layouts<select id="gaming-presets"><option value="">Choose a layout…</option></select></label><label class="field">Layout name<input id="gaming-preset-name" maxlength="48" placeholder="Streamer / game"></label><button id="gaming-save" class="ghost small">Save layout</button><button id="gaming-remove" class="ghost small">Remove</button></div>
       </div><aside class="gaming-preview gaming-panel"><h2>Vertical preview</h2><canvas id="gaming-preview" width="360" height="640" aria-label="Vertical composition preview"></canvas><p class="hint-s">Caption zone is a guide. Speech captions are generated on export.</p><button id="gaming-export" class="primary" disabled>Export clip</button><p class="hint-s">Up to 3 minutes · original kept</p></aside></div></section>`;
   const root = view.querySelector(".gaming-page"), $ = id => root.querySelector(`#gaming-${id}`);
+  mountGamingGuide(root);
   const video = $("video"), canvas = $("source-frame"), preview = $("preview"), ctx = canvas.getContext("2d"), out = preview.getContext("2d");
   let settings = {mode:"stack",camera:[0,.6,.3,.4],game:[0,0,1,1],share:.38,order:"camera",camera_fit:"contain",game_fit:"contain",mirror:false,resolution:1080,captions_at:"seam"};
   let edits=0, region="camera", source=null, objectURL=null, renderPlan=null, sequence=0, sourceSequence=0, drag=null, submitting=false, presets=[], autoRun=null;
@@ -159,7 +190,7 @@ async function renderGaming(params = {}) {
   presetList();controls();requestAnimationFrame(draw);
   try{
     const [opts,list]=await Promise.all([getOptions(),api("/api/jobs")]);if(!root.isConnected)return;
-    $("captions").innerHTML=opts.presets.map(p=>`<option value="${escape(p.id)}">${escape(p.label)}</option>`).join("");$("captions").value="none";
+    $("captions").innerHTML=opts.presets.map(p=>`<option value="${escape(p.id)}">${escape(p.label)}</option>`).join("");$("captions").value=opts.presets.some(p=>p.id===params.preset)?params.preset:"none";controls();
     for(const job of list.filter(j=>j.state==="done"))for(const file of job.outputs||[]){if(file.media!=="video")continue;const option=document.createElement("option");option.value=`${job.id}/${file.file}`;option.dataset.job=job.id;option.dataset.file=file.file;option.textContent=`${job.title} · ${file.label}`;$("library").append(option);}
     if(params.from&&params.file){$("library").value=`${params.from}/${params.file}`;loadSource(fileUrl(params.from,params.file,false),{job:params.from,fileName:params.file,name:params.file});}
   }catch(e){if(root.isConnected)fail(e.message);}

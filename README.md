@@ -35,7 +35,7 @@ Windows 10/11 · Linux · Python · FFmpeg · Whisper · runs offline after setu
 | Tool | What you get |
 |---|---|
 | **Clip maker** | Finds the best moments in a long video, cuts them to 9:16, follows the speaker and adds styled word-by-word captions. Optional thumbnail per clip |
-| **Live clips** | Records YouTube and Twitch streams in Chrome and saves a clip when chat reacts, with the setup before and the ending after |
+| **Live clips** | Captures YouTube/Twitch reactions. Turn captures or finished replays into 9:16 captioned Shorts, preview and download them in the same page |
 | **Gaming layout** | **Auto detect** finds the webcam in a gameplay recording for you, or draw webcam/game regions yourself, preview a vertical stack or camera overlay, save layouts, trim, and export with captions or without |
 | **Auto monitor** | Silent YouTube recording without browser tabs. Two simultaneous streams by default, configurable recording limits and independent buffers (experimental) |
 | **Publish** | Review clips, connect YouTube, and approve private uploads or scheduled posts. Four uploads per day by default; [setup](docs/publishing.md) |

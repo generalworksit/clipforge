@@ -34,8 +34,11 @@ class LiveTests(unittest.TestCase):
         self.jobs.stop(); self.token.stop(); self.tmp.cleanup()
 
     def test_pairing_and_origin_boundaries(self):
+        main.LIVE_CONNECTION["verified_at"]=None
         self.assertEqual(self.client.get("/api/live/health").status_code, 401)
+        self.assertIsNone(self.client.get("/api/live/setup").json()["verified_at"])
         self.assertEqual(self.client.get("/api/live/health", headers=self.headers).status_code, 200)
+        self.assertIsNotNone(self.client.get("/api/live/setup").json()["verified_at"])
         self.assertEqual(self.client.post("/api/live/pair", headers={"Origin": "https://evil.example"}).status_code, 403)
         self.assertEqual(self.client.post("/api/live/pair", headers=self.headers).status_code, 403)
         self.assertEqual(self.client.post("/api/jobs", headers=self.headers).status_code, 403)
@@ -115,6 +118,10 @@ class LiveTests(unittest.TestCase):
             self.assertIn("offscreen.js", archive.namelist())
             self.assertNotIn(".live-token", archive.namelist())
             self.assertEqual(json.loads(archive.read("manifest.json"))["manifest_version"], 3)
+            manifest=json.loads(archive.read("manifest.json"))
+            for icon in manifest["icons"].values():
+                self.assertIn(icon,archive.namelist())
+                self.assertGreater(len(archive.read(icon)),100)
 
     def test_detection_evidence_validation(self):
         evidence = {"version": 2, "signals": ["reaction_shift"], "score": 80, "unique": 12, "reactionShare": .7, "rateLift": 1.1}

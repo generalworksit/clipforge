@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -33,6 +34,7 @@ AUDIO_EXTS = {".mp3", ".m4a", ".wav", ".aac", ".ogg", ".opus", ".flac"}
 MAX_URLS = 20
 PORT = int(CONFIG["server"]["port"])
 LOCAL_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
+LIVE_CONNECTION = {"verified_at": None}
 
 
 @asynccontextmanager
@@ -90,7 +92,9 @@ async def local_only(request: Request, call_next):
 
 @app.get("/api/live/setup")
 def live_setup():
-    return {"extension_path": str(ROOT / "extension"), "port": PORT, "paired": live.TOKEN_PATH.exists()}
+    manifest=json.loads((ROOT / "extension" / "manifest.json").read_text(encoding="utf-8"))
+    return {"extension_path": str(ROOT / "extension"), "port": PORT, "paired": live.TOKEN_PATH.exists(),
+            "extension_version": manifest["version"], "verified_at": LIVE_CONNECTION["verified_at"]}
 
 
 @app.post("/api/live/pair")
@@ -100,6 +104,7 @@ def live_pair():
 
 @app.get("/api/live/health")
 def live_health():
+    LIVE_CONNECTION["verified_at"] = time.time()
     return {"ok": True, "version": 1}
 
 
@@ -115,8 +120,10 @@ def live_extension():
     out = BytesIO()
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as archive:
         for file in sorted((ROOT / "extension").iterdir()):
-            if file.suffix in {".js", ".mjs", ".json", ".html", ".css", ".md"}:
+            if file.is_file() and (file.suffix in {".js", ".mjs", ".json", ".html", ".css", ".md"} or file.name=="LICENSE"):
                 archive.write(file, file.name)
+        for file in sorted((ROOT / "extension" / "icons").glob("*.png")):
+            archive.write(file, "icons/" + file.name)
     return Response(out.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": 'attachment; filename="clipforge-live.zip"'})
 
@@ -125,7 +132,7 @@ def live_extension():
 def index() -> HTMLResponse:
     """index.html with versioned asset URLs, so an update never runs a cached old app.js/style.css."""
     html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
-    for name in ("app.js", "monitor.js", "style.css", "gaming.js", "gaming.css", "publishing.js"):
+    for name in ("app.js", "monitor.js", "style.css", "gaming.js", "gaming.css", "publishing.js", "live-tools.js"):
         version = int((STATIC_DIR / name).stat().st_mtime)
         html = html.replace(f"/static/{name}\"", f"/static/{name}?v={version}\"")
     return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
@@ -314,6 +321,7 @@ async def create_job(
     effect: str = Form("none"),
     effect_intensity: float = Form(0.5),
     layout: str = Form("{}"),
+    workflow: str = Form(""),
 ) -> dict:
     if kind not in ("clips", "subtitles", "convert", "voice", "layout"):
         raise HTTPException(400, f"Unknown tool '{kind}'. Downloads go to /api/downloads.")
@@ -337,7 +345,10 @@ async def create_job(
             raise HTTPException(400, str(exc)) from None
         exts = VIDEO_EXTS
     elif kind == "clips":
+        if workflow not in ("", "live"):
+            raise HTTPException(400, "Unknown clipping workflow.")
         opts, exts = {"preset": preset, "position": position}, VIDEO_EXTS
+        if workflow: opts["workflow"] = workflow
         opts.update(_effect_options(effect, effect_intensity))
         opts.update(_pick_options(clips, length, clip_mode, cats, framing), erase_subs=_flag(erase_subs),
                     thumbs=_flag(thumbs), **_redraw_options(_flag(thumbs) and _flag(thumbs_ai), thumbs_strength))

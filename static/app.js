@@ -1611,16 +1611,18 @@ api("/api/system/check").then((r) => healthDot(r.status)).catch(() => {});
 
 /* ---------------------------------------------------------------- router */
 
-async function renderLive() {
+async function renderLive(params={}) {
   setNav("live"); clearTimeout(pollTimer);
-  view.innerHTML = `<section class="live-page"><header class="page-head"><p class="eyebrow">Live capture / Twitch + YouTube</p><h1>Catch it before chat erupts</h1><p class="lede">Keep the setup, the reaction, and the ending. Clean clips arrive here, ready for a quick edit in CapCut.</p></header>
+  view.innerHTML = `<section class="live-page"><header class="page-head"><p class="eyebrow">Live capture / Twitch + YouTube</p><h1>Catch it before chat erupts</h1><p class="lede">Capture the moment. Turn a replay or saved clip into captioned Shorts.</p></header>
     <div class="live-timeline" aria-label="Default capture timing"><div><span>20 seconds before</span><strong>The setup</strong></div><div><span>Chat reaction spike</span><strong>The moment</strong></div><div><span>12 seconds after chat settles</span><strong>The ending</strong></div></div>
-    <details class="live-setup" open><summary>Connect the Chrome companion <span>One-time setup</span></summary><ol>
+    <details class="live-setup" id="live-connection-setup" open><summary>Connect the Chrome companion <span>One-time setup</span></summary><ol>
       <li><strong>Load the extension.</strong> Open <code>chrome://extensions</code>, enable Developer mode, choose <b>Load unpacked</b>, then select <code id="live-path">Loading…</code>. <a href="/api/live/extension.zip">Download ZIP</a> if you prefer to extract it elsewhere.</li>
       <li><strong>Connect once.</strong> Click <b>Connect app</b> in the extension. For manual setup: <button class="ghost small" id="live-pair">Show pairing key</button><div id="live-key-box" hidden><label class="field"><span class="label">Paste into “Use a pairing key instead” in the extension</span><input id="live-key" type="password" readonly autocomplete="off"></label><button class="ghost small" id="live-copy">Copy key</button><span class="hint-s" id="live-port"></span></div></li>
       <li><strong>Open a live stream and its chat.</strong> Pin ClipForge Live in Chrome, keep the player fully visible and playing, then click <b>Start capture</b> in the extension. Allow 20 seconds to build the buffer.</li></ol>
       <p class="hint-s">Keep the stream tab visible while recording. Capture includes anything shown over the player, including ads. Settings apply to the next capture. The extension’s popup shows capture status; this page shows received clips.</p><p id="live-setup-error" role="alert"></p></details>
-    <div class="section-head"><h2>Clip inbox</h2><span class="muted" id="live-count">Checking…</span><button class="ghost small" id="live-refresh">Refresh</button></div><div id="live-inbox" aria-live="polite"></div>
+    <p id="live-verified" class="hint-s" role="status">Waiting for an extension connection check.</p>
+    <div id="live-tools"></div>
+    <div class="section-head"><h2>Captured moments</h2><span class="muted" id="live-count">Checking…</span><button class="ghost small" id="live-refresh">Refresh</button></div><div id="live-inbox" aria-live="polite"></div>
     <p class="hint-s">Chat spikes are candidate highlights, not a guarantee of a good clip. Adjust sensitivity or use “Save moment” in the extension. Optional sound spikes can help when chat is quiet.</p></section>`;
   const box = document.getElementById("live-inbox"), setupError = document.getElementById("live-setup-error");
   try {
@@ -1629,26 +1631,35 @@ async function renderLive() {
     document.getElementById("live-path").textContent = setup.extension_path;
     document.getElementById("live-port").textContent = ` Port ${setup.port}`;
   } catch (e) { setupError.textContent = e.message; }
-  document.getElementById("live-pair").onclick = async () => {
+  document.getElementById("live-pair").onclick = async (event) => {
+    const button=event.currentTarget;button.disabled=true;setupError.textContent="Requesting the connection key…";
     try {
       const data = await api("/api/live/pair", {method: "POST"});
       if (!box.isConnected) return;
       document.getElementById("live-key").value = data.token;
       document.getElementById("live-key-box").hidden = false;
       document.getElementById("live-key").select();
+      setupError.textContent="Key ready. Paste it in the extension and press Verify key.";
     } catch (e) { setupError.textContent = e.message; }
+    finally {button.disabled=false;}
   };
   document.getElementById("live-copy").onclick = async (event) => {
     try { await navigator.clipboard.writeText(document.getElementById("live-key").value); flash(event.target, "Copied"); }
     catch { setupError.textContent = "Select the key and press Ctrl+C to copy it."; }
   };
-  let refreshing = false, previous = "";
+  const toolsHost=document.getElementById("live-tools");
+  box.after(toolsHost);
+  await mountLiveTools(toolsHost,params);
+  if(params.tools==="1"&&toolsHost.isConnected)toolsHost.scrollIntoView({behavior:"smooth",block:"start"});
+  let refreshing = false, previous = "", connectionSeen=false;
   async function refresh() {
     if (refreshing || !box.isConnected) return;
     refreshing = true; clearTimeout(pollTimer);
     try {
-      const data = await api("/api/jobs?kind=live"), items = Array.isArray(data) ? data : data.jobs;
+      const [data,setup] = await Promise.all([api("/api/jobs?kind=live"),api("/api/live/setup"),toolsHost.refreshShorts?.()]), items = Array.isArray(data) ? data : data.jobs;
       if (!box.isConnected) return;
+      document.getElementById("live-verified").textContent=setup.verified_at?`Extension connection verified at ${new Date(setup.verified_at*1000).toLocaleTimeString()}.`:`App ready on port ${setup.port}. In the extension, choose Connect app or Verify key. Extension version: ${setup.extension_version||"reload after updating"}.`;
+      if(setup.verified_at&&!connectionSeen){document.getElementById("live-connection-setup").open=false;connectionSeen=true;}
       document.getElementById("live-count").textContent = `${items.length} received · auto-refreshes`;
       const version = JSON.stringify(items.map((j) => [j.id, j.state, j.finished, j.error]));
       if (version !== previous) {
@@ -1664,7 +1675,7 @@ async function renderLive() {
           for (const card of grid.querySelectorAll(".live-card")) {
             const job = items.find(j => j.id === card.dataset.id);
             const file = job?.state === "done" && job.outputs?.find(f => f.media === "video");
-            if (file) card.querySelector(".live-actions").insertAdjacentHTML("afterbegin", `<a class="ghost small" href="#/gaming?from=${job.id}&file=${encodeURIComponent(file.file)}">Gaming layout</a>`);
+            if (file) card.querySelector(".live-actions").insertAdjacentHTML("afterbegin", `<a class="primary small live-gaming" href="#/gaming?from=${job.id}&file=${encodeURIComponent(file.file)}&preset=bold">Make captioned Short</a><a class="ghost small" href="#/live?from=${job.id}&file=${encodeURIComponent(file.file)}&clips=1">Find highlights</a>`);
           }
           bulkBar(grid, { item: ".live-card", noun: "clip", onDeleted: () => { previous = ""; refresh(); } });
         }
@@ -1674,6 +1685,8 @@ async function renderLive() {
   }
   document.getElementById("live-refresh").onclick = refresh;
   box.addEventListener("click", async (event) => {
+    const gaming=event.target.closest(".live-gaming");
+    if(gaming){gaming.href=gaming.href.replace(/preset=[^&]*/,`preset=${encodeURIComponent(toolsHost.captionPreset?.()||"bold")}`);return;}
     const btn = event.target.closest(".live-del");
     if (!btn || btn.disabled) return;
     const card = btn.closest(".live-card"), err = card.querySelector(".live-del-error");

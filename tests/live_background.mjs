@@ -6,12 +6,12 @@ const calls = [], origin = 'chrome-extension://' + 'a'.repeat(32) + '/';
 const chrome = {
   runtime: {getURL:p=>origin+p, getContexts:async()=>[{}], onMessage:{addListener:fn=>message=fn},
     sendMessage:async m=>{calls.push(m.type);return m.type==='STATUS'?{recording}:{ok:true}}},
-  storage: {local:{get:async()=>({token:'test-key',port:8000})},session:{get:async()=>({tabId:42}),remove:async()=>calls.push('REMOVE_TAB')}},
+  storage: {local:{get:async()=>({token:'test-key',port:8000}),set:async()=>{}},session:{get:async()=>({tabId:42}),remove:async()=>calls.push('REMOVE_TAB')}},
   commands:{onCommand:{addListener:fn=>shortcut=fn}},
   action:{setBadgeText:async v=>calls.push('BADGE:'+v.text)},
   tabs:{onRemoved:{addListener:()=>{}},sendMessage:async(_id,m)=>calls.push(m.type)}
 };
-vm.runInNewContext(fs.readFileSync(new URL('../extension/background.js',import.meta.url),'utf8'),{chrome,URL,AbortSignal,fetch:async()=>{requests++;return {ok:true}}});
+vm.runInNewContext(fs.readFileSync(new URL('../extension/background.js',import.meta.url),'utf8'),{chrome,URL,AbortSignal,fetch:async()=>{requests++;return {ok:true,json:async()=>({ok:true,version:1})}}});
 const send = (type,url=origin+'popup.html')=>new Promise(resolve=>message({type},{url},resolve));
 assert((await send('CHECK')).ok);assert.equal(requests,1);
 assert.equal(message({type:'CHECK'},{url:'https://www.youtube.com/watch?v=x',tab:{id:42}},()=>{}),undefined);

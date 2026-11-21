@@ -25,9 +25,14 @@ node tests/live_pairing.mjs
 .venv\Scripts\python tests/browser_gaming.py
 .venv\Scripts\python tests/browser_caption_timing.py
 .venv\Scripts\python tests/browser_publishing.py
+.venv\Scripts\python tests/browser_live_shorts.py
+.venv\Scripts\python -m playwright install chromium
+.venv\Scripts\python tests/browser_extension_native.py
 ```
 
 Browser checks use installed Google Chrome. `tests/browser_live.py` exercises real MediaRecorder/FFmpeg using generated input. `tools/smoke_monitor.py` additionally needs cached Kokoro/Whisper models and tests real transcription on generated speech. Synthetic chat and mocked browser APIs do not validate a real platform stream.
+
+The native extension check loads the downloadable ZIP into a temporary Chromium profile and verifies the real MV3 worker, offscreen status, automatic/manual pairing, persistence and offline errors. It does not capture a real broadcast. `browser_live_shorts.py` exercises actual heuristic selection and captioned 9:16 rendering with a generated video and explicit transcript fixture, plus the gaming guide's pause/replay and reduced-motion behavior.
 
 The app binds to loopback. The companion stores a local connection key; YouTube API credentials use Windows DPAPI. Automatic pairing runs only after a popup action, through the local app page. Foreign websites cannot send recorder controls. Do not commit runtime folders, keys, cookies or user media.
 
